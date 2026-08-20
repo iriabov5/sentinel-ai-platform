@@ -17,7 +17,6 @@ val mockkVersion = providers.gradleProperty("mockkVersion")
 
 dependencies {
     ksp("io.micronaut:micronaut-http-validation")
-    ksp("io.micronaut.openapi:micronaut-openapi")
     ksp("io.micronaut.serde:micronaut-serde-processor")
     ksp("io.micronaut:micronaut-inject-java")
     ksp("io.micronaut.validation:micronaut-validation-processor")
@@ -26,15 +25,16 @@ dependencies {
     implementation("io.micronaut:micronaut-management")
     implementation("io.micronaut.kafka:micronaut-kafka")
     implementation("io.micronaut.kotlin:micronaut-kotlin-runtime")
+    implementation("io.micronaut.mongodb:micronaut-mongo-sync")
     implementation("io.micronaut.reactor:micronaut-reactor")
     implementation("io.micronaut.serde:micronaut-serde-jackson")
     implementation("io.micronaut.validation:micronaut-validation")
-    implementation("io.swagger.core.v3:swagger-annotations")
     implementation("jakarta.validation:jakarta.validation-api")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
     implementation("org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion.get()}")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:${kotlinVersion.get()}")
+    implementation("org.mongodb:mongodb-driver-sync")
 
     runtimeOnly("ch.qos.logback:logback-classic")
     runtimeOnly("com.fasterxml.jackson.module:jackson-module-kotlin")
@@ -44,15 +44,8 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
-configure<KspExtension> {
-    arg(
-        "micronaut.openapi.views.spec",
-        "mapping.path=swagger,swagger-ui.enabled=true,swagger-ui.theme=flattop"
-    )
-}
-
 application {
-    mainClass.set("com.ryabov.sentinelai.ingestion.ApplicationKt")
+    mainClass.set("com.ryabov.sentinelai.behavior.ApplicationKt")
 }
 
 java {
@@ -71,7 +64,7 @@ micronaut {
     testRuntime("junit5")
     processing {
         incremental(true)
-        annotations("com.ryabov.sentinelai.ingestion.*")
+        annotations("com.ryabov.sentinelai.behavior.*")
     }
     aot {
         optimizeServiceLoading.set(false)
@@ -133,8 +126,8 @@ tasks.check {
 
 sonar {
     properties {
-        property("sonar.projectKey", "sentinel-ai-platform-event-ingestion-service")
-        property("sonar.projectName", "Sentinel AI Platform Event Ingestion Service")
+        property("sonar.projectKey", "sentinel-ai-platform-behavior-analysis-service")
+        property("sonar.projectName", "Sentinel AI Platform Behavior Analysis Service")
         property("sonar.sources", "src/main/kotlin")
         property("sonar.tests", "src/test/kotlin")
         property(
@@ -148,3 +141,5 @@ tasks.matching { it.name == "sonar" }.configureEach {
     dependsOn(tasks.test)
     dependsOn(tasks.jacocoTestReport)
 }
+
+configure<KspExtension> {}

@@ -1,0 +1,77 @@
+asyncapi: 2.6.0
+info:
+  title: Sentinel AI Platform Security Events
+  version: 0.1.0
+  description: >
+    Kafka contract for accepted security events. Producer is
+    event-ingestion-service. Consumer is behavior-analysis-service.
+  defaultContentType: application/json
+
+channels:
+  security.events.raw:
+    description: Accepted and validated security events ready for behavior history.
+    publish:
+      operationId: publishAcceptedSecurityEvent
+      summary: event-ingestion-service publishes an accepted event
+      message:
+        $ref: "#/components/messages/AcceptedSecurityEvent"
+    subscribe:
+      operationId: consumeAcceptedSecurityEvent
+      summary: behavior-analysis-service consumes an accepted event
+      message:
+        $ref: "#/components/messages/AcceptedSecurityEvent"
+
+  security.events.raw.dlq:
+    description: Poison accepted-event records that failed processing after retries.
+    publish:
+      operationId: publishDeadLetter
+      summary: behavior-analysis-service publishes an unprocessable record
+      message:
+        $ref: "#/components/messages/DeadLetterSecurityEvent"
+
+components:
+  messages:
+    AcceptedSecurityEvent:
+      name: AcceptedSecurityEvent
+      title: Accepted security event
+      contentType: application/json
+      headers:
+        type: object
+        properties:
+          kafka_key:
+            type: string
+            description: Kafka record key. MUST equal subject.id.
+      payload:
+        $ref: "../json-schema/accepted-security-event.json"
+
+    DeadLetterSecurityEvent:
+      name: DeadLetterSecurityEvent
+      title: Dead-letter security event
+      contentType: application/json
+      headers:
+        type: object
+        properties:
+          kafka_key:
+            type: string
+            description: Original Kafka record key when available.
+      payload:
+        type: object
+        additionalProperties: false
+        required:
+          - originalTopic
+          - payload
+          - failedAt
+        properties:
+          originalTopic:
+            type: string
+            const: security.events.raw
+          originalKey:
+            type: ["string", "null"]
+          payload:
+            type: string
+            description: Original record value that could not be processed.
+          reason:
+            type: string
+          failedAt:
+            type: string
+            format: date-time

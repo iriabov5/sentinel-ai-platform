@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sentinel-ai-platform.local/schemas/accepted-security-event.json",
+  "title": "AcceptedSecurityEvent",
+  "description": "Kafka payload for an accepted security event published to security.events.raw.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "eventId",
+    "receivedAt",
+    "eventType",
+    "subject",
+    "occurredAt",
+    "source"
+  ],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Identifier returned to the REST client on 202 Accepted."
+    },
+    "receivedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "eventType": {
+      "type": "string",
+      "enum": [
+        "LOGIN_SUCCESS",
+        "LOGIN_FAILED",
+        "API_REQUEST",
+        "FILE_DOWNLOAD",
+        "PERMISSION_CHANGE",
+        "DEVICE_LOGIN",
+        "TOKEN_CREATED",
+        "PRIVILEGE_ESCALATION",
+        "DATA_EXPORT",
+        "ADMIN_ACTION"
+      ]
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "id"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["USER", "SERVICE_ACCOUNT"]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      }
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["application"],
+      "properties": {
+        "application": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "ip": {
+          "type": ["string", "null"],
+          "maxLength": 64
+        },
+        "deviceId": {
+          "type": ["string", "null"],
+          "maxLength": 128
+        },
+        "endpoint": {
+          "type": ["string", "null"],
+          "maxLength": 256
+        },
+        "region": {
+          "type": ["string", "null"],
+          "maxLength": 64
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  }
+}

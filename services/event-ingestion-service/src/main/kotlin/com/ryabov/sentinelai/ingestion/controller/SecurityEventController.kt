@@ -23,7 +23,7 @@ import reactor.core.publisher.Mono
  *
  * Принимает security events от внешних applications, агентов или будущего
  * `security-agent`, запускает validation через Micronaut и возвращает
- * `202 Accepted`, не выполняя downstream processing синхронно в request path.
+ * `202 Accepted` только после успешной публикации в Kafka.
  */
 @Controller("/api/v1/events")
 @Tag(name = "Security Events", description = "Прием security events для дальнейшей asynchronous обработки")
@@ -41,7 +41,7 @@ open class SecurityEventController(
     @Post
     @Operation(
         summary = "Принять security event",
-        description = "Валидирует event envelope и возвращает acceptance id для downstream processing."
+        description = "Валидирует event envelope, публикует accepted event в Kafka и возвращает acceptance id."
     )
     @ApiResponse(
         responseCode = "202",
@@ -51,6 +51,11 @@ open class SecurityEventController(
     @ApiResponse(
         responseCode = "400",
         description = "Ошибка validation request body",
+        content = [Content(schema = Schema(implementation = JsonError::class))]
+    )
+    @ApiResponse(
+        responseCode = "503",
+        description = "Kafka publish не удался после timeout или retries",
         content = [Content(schema = Schema(implementation = JsonError::class))]
     )
     open fun accept(@Body @Valid request: SecurityEventRequest): Mono<HttpResponse<SecurityEventAcceptedResponse>> =
