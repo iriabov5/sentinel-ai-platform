@@ -14,6 +14,8 @@ plugins {
 
 val kotlinVersion = providers.gradleProperty("kotlinVersion")
 val mockkVersion = providers.gradleProperty("mockkVersion")
+val testcontainersVersion = providers.gradleProperty("testcontainersVersion")
+val commonsCodecVersion = providers.gradleProperty("commonsCodecVersion")
 
 dependencies {
     ksp("io.micronaut:micronaut-http-validation")
@@ -41,6 +43,9 @@ dependencies {
     runtimeOnly("org.yaml:snakeyaml")
 
     testImplementation("io.mockk:mockk:${mockkVersion.get()}")
+    testImplementation("org.testcontainers:junit-jupiter:${testcontainersVersion.get()}")
+    testImplementation("org.testcontainers:kafka:${testcontainersVersion.get()}")
+    testRuntimeOnly("commons-codec:commons-codec:${commonsCodecVersion.get()}")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

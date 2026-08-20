@@ -8,7 +8,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
 @Singleton
-@Requires(env = ["test"])
+@Requires(property = "sentinel.persistence", value = "memory")
 open class InMemoryEventHistoryRepository : EventHistoryRepository {
 
     val documents: ConcurrentHashMap<String, EventHistoryDocument> = ConcurrentHashMap()

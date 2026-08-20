@@ -10,7 +10,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
  * Test double, который запоминает published events и может эмулировать сбой Kafka.
  */
 @Singleton
-@Requires(env = ["test"])
+@Requires(property = "kafka.enabled", value = "false")
 open class RecordingAcceptedSecurityEventPublisher : AcceptedSecurityEventPublisher {
 
     val published: ConcurrentLinkedQueue<AcceptedSecurityEvent> = ConcurrentLinkedQueue()

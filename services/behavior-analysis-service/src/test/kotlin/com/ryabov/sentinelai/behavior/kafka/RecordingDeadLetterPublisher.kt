@@ -6,7 +6,7 @@ import jakarta.inject.Singleton
 import java.util.concurrent.ConcurrentLinkedQueue
 
 @Singleton
-@Requires(env = ["test"])
+@Requires(property = "kafka.enabled", value = "false")
 open class RecordingDeadLetterPublisher : DeadLetterPublisher {
 
     val published: ConcurrentLinkedQueue<Pair<String, String>> = ConcurrentLinkedQueue()

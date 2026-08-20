@@ -23,6 +23,7 @@ security events.
 - **WHEN** implementation is complete
 - **THEN** tests SHALL cover successful acceptance and validation failures
 - **AND** tests SHALL cover successful Kafka publish and Kafka publish failure
+- **AND** Kafka publish integration tests SHALL start Kafka through Testcontainers
 - **AND** JaCoCo coverage verification SHALL pass before commit
 
 ## ADDED Requirements
@@ -59,3 +60,19 @@ settings as typed runtime configuration.
   binding
 - **AND** producer logic SHALL NOT rely on hardcoded broker coordinates as the
   only source of truth
+
+### Requirement: Kafka publish is verified with Testcontainers
+`event-ingestion-service` SHALL verify Kafka publishing through Testcontainers
+integration tests in addition to unit tests with doubles.
+
+#### Scenario: Docker is available
+- **WHEN** Kafka integration tests run and Docker is available
+- **THEN** tests SHALL start Kafka through Testcontainers
+- **AND** tests SHALL observe the accepted event on `security.events.raw`
+- **AND** Kafka record key SHALL equal `subject.id`
+
+#### Scenario: Docker is unavailable
+- **WHEN** Docker is not available
+- **THEN** Testcontainers Kafka tests SHALL be skipped
+- **AND** unit tests SHALL still verify publish success and publish failure
+  behavior

@@ -7,7 +7,7 @@ import io.micronaut.context.annotation.Requires
 import org.apache.kafka.clients.producer.RecordMetadata
 import java.util.concurrent.CompletableFuture
 
-@Requires(notEnv = ["test"])
+@Requires(property = "kafka.enabled", value = "true", defaultValue = "true")
 @KafkaClient(id = "security-events-dlq")
 fun interface DeadLetterKafkaClient {
 

@@ -12,6 +12,7 @@ mongodb:
   uri: ${MONGODB_URI:mongodb://localhost:27017/behavior_analysis}
 
 sentinel:
+  persistence: mongo
   kafka:
     topics:
       raw: ${KAFKA_TOPIC_SECURITY_EVENTS_RAW:security.events.raw}

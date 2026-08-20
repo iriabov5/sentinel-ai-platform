@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit
  * configured timeout. Blocking producer IO выполняется на injected IO dispatcher.
  */
 @Singleton
-@Requires(notEnv = ["test"])
+@Requires(property = "kafka.enabled", value = "true", defaultValue = "true")
 open class KafkaAcceptedSecurityEventPublisher(
     private val kafkaClient: AcceptedSecurityEventKafkaClient,
     private val kafkaProperties: IngestionKafkaProperties,

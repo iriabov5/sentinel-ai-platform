@@ -11,7 +11,7 @@ import java.util.concurrent.CompletableFuture
 /**
  * Micronaut Kafka producer client для topic accepted security events.
  */
-@Requires(notEnv = ["test"])
+@Requires(property = "kafka.enabled", value = "true", defaultValue = "true")
 @KafkaClient(id = "accepted-security-events")
 fun interface AcceptedSecurityEventKafkaClient {
 

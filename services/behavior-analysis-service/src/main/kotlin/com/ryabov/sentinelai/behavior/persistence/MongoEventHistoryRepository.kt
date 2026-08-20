@@ -22,7 +22,7 @@ import org.bson.Document
  * Blocking driver вызывается на injected IO dispatcher.
  */
 @Singleton
-@Requires(notEnv = ["test"])
+@Requires(property = "sentinel.persistence", value = "mongo", defaultValue = "mongo")
 open class MongoEventHistoryRepository(
     private val mongoClient: MongoClient,
     private val mongoProperties: BehaviorMongoProperties,

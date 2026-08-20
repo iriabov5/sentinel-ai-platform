@@ -51,6 +51,8 @@
   недоступен. `./gradlew sonar` для `sentinel-ai-platform`: quality gate OK,
   0 bugs / 0 vulnerabilities / 0 code smells / 0 security hotspots,
   coverage 89.8%.
+- [x] 5.6 Integration tests через Testcontainers для Kafka publish и Mongo
+  persist/DLQ.
 
 ## 6. Commit / PR
 

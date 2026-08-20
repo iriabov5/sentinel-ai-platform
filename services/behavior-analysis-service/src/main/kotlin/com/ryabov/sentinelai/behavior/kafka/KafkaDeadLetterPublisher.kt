@@ -9,7 +9,7 @@ import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 
 @Singleton
-@Requires(notEnv = ["test"])
+@Requires(property = "kafka.enabled", value = "true", defaultValue = "true")
 open class KafkaDeadLetterPublisher(
     private val kafkaClient: DeadLetterKafkaClient,
     @param:Named("io") private val ioDispatcher: CoroutineDispatcher
