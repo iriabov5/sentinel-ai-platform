@@ -15,3 +15,4 @@ dependencyResolutionManagement {
 rootProject.name = "sentinel-ai-platform"
 
 include("services:event-ingestion-service")
+include("services:behavior-analysis-service")

@@ -13,6 +13,9 @@ plugins {
 }
 
 val kotlinVersion = providers.gradleProperty("kotlinVersion")
+val mockkVersion = providers.gradleProperty("mockkVersion")
+val testcontainersVersion = providers.gradleProperty("testcontainersVersion")
+val commonsCodecVersion = providers.gradleProperty("commonsCodecVersion")
 
 dependencies {
     ksp("io.micronaut:micronaut-http-validation")
@@ -23,6 +26,7 @@ dependencies {
 
     implementation("io.micronaut:micronaut-http-client")
     implementation("io.micronaut:micronaut-management")
+    implementation("io.micronaut.kafka:micronaut-kafka")
     implementation("io.micronaut.kotlin:micronaut-kotlin-runtime")
     implementation("io.micronaut.reactor:micronaut-reactor")
     implementation("io.micronaut.serde:micronaut-serde-jackson")
@@ -38,7 +42,10 @@ dependencies {
     runtimeOnly("com.fasterxml.jackson.module:jackson-module-kotlin")
     runtimeOnly("org.yaml:snakeyaml")
 
-    testImplementation("io.mockk:mockk:1.14.6")
+    testImplementation("io.mockk:mockk:${mockkVersion.get()}")
+    testImplementation("org.testcontainers:junit-jupiter:${testcontainersVersion.get()}")
+    testImplementation("org.testcontainers:kafka:${testcontainersVersion.get()}")
+    testRuntimeOnly("commons-codec:commons-codec:${commonsCodecVersion.get()}")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
@@ -104,7 +111,9 @@ tasks.jacocoTestReport {
             fileTree(it) {
                 exclude(
                     "**/Application*",
-                    "**/model/**"
+                    "**/model/**",
+                    "**/kafka/*KafkaClient*",
+                    "**/configuration/CoroutineDispatcherFactory*"
                 )
             }
         })

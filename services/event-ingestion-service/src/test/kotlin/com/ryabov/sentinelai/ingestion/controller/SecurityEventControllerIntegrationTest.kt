@@ -1,5 +1,6 @@
 package com.ryabov.sentinelai.ingestion.controller
 
+import com.ryabov.sentinelai.ingestion.kafka.RecordingAcceptedSecurityEventPublisher
 import com.ryabov.sentinelai.ingestion.model.SecurityEventAcceptedResponse
 import com.ryabov.sentinelai.ingestion.model.SecurityEventRequest
 import com.ryabov.sentinelai.ingestion.model.SecurityEventSource
@@ -17,6 +18,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.time.Instant
@@ -29,6 +32,14 @@ class SecurityEventControllerIntegrationTest {
     @Inject
     @field:Client("/")
     lateinit var client: HttpClient
+
+    @Inject
+    lateinit var publisher: RecordingAcceptedSecurityEventPublisher
+
+    @BeforeEach
+    fun resetPublisher() {
+        publisher.reset()
+    }
 
     @Test
     @DisplayName("Возвращает 202 Accepted для valid security event")
@@ -44,6 +55,10 @@ class SecurityEventControllerIntegrationTest {
         UUID.fromString(body.eventId)
         assertEquals("ACCEPTED", body.status.name)
         assertNotNull(body.receivedAt)
+        assertEquals(1, publisher.published.size)
+        val published = publisher.published.first()
+        assertEquals(body.eventId, published.eventId)
+        assertEquals("user-123", published.subject.id)
     }
 
     @Test
@@ -61,6 +76,7 @@ class SecurityEventControllerIntegrationTest {
         }
 
         assertEquals(HttpStatus.BAD_REQUEST, exception.status)
+        assertTrue(publisher.published.isEmpty())
     }
 
     @Test
@@ -79,6 +95,23 @@ class SecurityEventControllerIntegrationTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, exception.status)
         assertFalse(exception.message.isNullOrBlank())
+        assertTrue(publisher.published.isEmpty())
+    }
+
+    @Test
+    @DisplayName("Возвращает 503 Service Unavailable, если Kafka publish не удался")
+    fun `kafka publish failure returns service unavailable`() {
+        publisher.shouldFail = true
+
+        val exception = assertThrows(HttpClientResponseException::class.java) {
+            client.toBlocking().exchange(
+                HttpRequest.POST("/api/v1/events", validRequest()),
+                SecurityEventAcceptedResponse::class.java
+            )
+        }
+
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, exception.status)
+        assertTrue(publisher.published.isEmpty())
     }
 
     private fun validRequest(): SecurityEventRequest =

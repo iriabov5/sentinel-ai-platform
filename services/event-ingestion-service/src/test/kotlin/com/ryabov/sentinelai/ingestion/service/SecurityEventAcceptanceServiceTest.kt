@@ -1,6 +1,7 @@
 package com.ryabov.sentinelai.ingestion.service
 
 import com.ryabov.sentinelai.ingestion.configuration.IngestionMetadataProperties
+import com.ryabov.sentinelai.ingestion.model.AcceptedSecurityEvent
 import com.ryabov.sentinelai.ingestion.model.SecurityEventAcceptanceStatus
 import com.ryabov.sentinelai.ingestion.model.SecurityEventRequest
 import com.ryabov.sentinelai.ingestion.model.SecurityEventSource
@@ -13,6 +14,8 @@ import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.time.Instant
@@ -21,21 +24,32 @@ import java.util.UUID
 @DisplayName("Acceptance service security events")
 class SecurityEventAcceptanceServiceTest {
 
-    private val service = SecurityEventAcceptanceService(testMetadataProperties())
+    private val publisher = RecordingPublisher()
+    private val service = SecurityEventAcceptanceService(testMetadataProperties(), publisher)
+
+    @BeforeEach
+    fun resetPublisher() {
+        publisher.reset()
+    }
 
     @Test
-    @DisplayName("Создает acceptance response для valid event")
-    fun `valid event creates acceptance response`() = runBlocking {
+    @DisplayName("Создает acceptance response и публикует valid event")
+    fun `valid event creates acceptance response and publishes`() = runBlocking {
         val response = service.accept(validRequest())
 
         UUID.fromString(response.eventId)
         assertEquals(SecurityEventAcceptanceStatus.ACCEPTED, response.status)
         assertNotNull(response.receivedAt)
+        assertEquals(1, publisher.published.size)
+        val published = publisher.published.first()
+        assertEquals(response.eventId, published.eventId)
+        assertEquals(response.receivedAt, published.receivedAt)
+        assertEquals("user-123", published.subject.id)
     }
 
     @Test
-    @DisplayName("Отклоняет metadata с пустым ключом")
-    fun `blank metadata key is rejected`() {
+    @DisplayName("Не публикует event при ошибке metadata validation")
+    fun `invalid metadata is not published`() {
         val exception = assertThrows(HttpStatusException::class.java) {
             runBlocking {
                 service.accept(validRequest().copy(metadata = mapOf(" " to "value")))
@@ -43,6 +57,7 @@ class SecurityEventAcceptanceServiceTest {
         }
 
         assertEquals(HttpStatus.BAD_REQUEST, exception.status)
+        assertTrue(publisher.published.isEmpty())
     }
 
     @Test
@@ -55,6 +70,7 @@ class SecurityEventAcceptanceServiceTest {
         }
 
         assertEquals(HttpStatus.BAD_REQUEST, exception.status)
+        assertTrue(publisher.published.isEmpty())
     }
 
     @Test
@@ -76,6 +92,22 @@ class SecurityEventAcceptanceServiceTest {
         }
 
         assertEquals(HttpStatus.BAD_REQUEST, exception.status)
+        assertTrue(publisher.published.isEmpty())
+    }
+
+    @Test
+    @DisplayName("Возвращает 503, если Kafka publish завершился ошибкой")
+    fun `kafka publish failure returns service unavailable`() {
+        publisher.shouldFail = true
+
+        val exception = assertThrows(HttpStatusException::class.java) {
+            runBlocking {
+                service.accept(validRequest())
+            }
+        }
+
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, exception.status)
+        assertTrue(publisher.published.isEmpty())
     }
 
     private fun validRequest(): SecurityEventRequest =
@@ -98,4 +130,21 @@ class SecurityEventAcceptanceServiceTest {
             override val maxKeyLength: Int = 64
             override val maxValueLength: Int = 512
         }
+
+    private class RecordingPublisher : AcceptedSecurityEventPublisher {
+        val published = mutableListOf<AcceptedSecurityEvent>()
+        var shouldFail: Boolean = false
+
+        override suspend fun publish(event: AcceptedSecurityEvent) {
+            if (shouldFail) {
+                throw IllegalStateException("Kafka unavailable")
+            }
+            published += event
+        }
+
+        fun reset() {
+            published.clear()
+            shouldFail = false
+        }
+    }
 }

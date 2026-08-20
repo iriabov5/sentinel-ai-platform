@@ -131,8 +131,10 @@ typed config: ingestion `8081`, behavior-analysis `8082`.
 `.env.example` получает safe local values для bootstrap servers, topic,
 MongoDB URI и service port.
 
-Testcontainers покрывают Kafka + MongoDB в integration tests, чтобы quality
-check не зависел от вручную запущенного Compose.
+Unit tests используют in-memory doubles и не поднимают брокер/Mongo.
+Integration tests через Testcontainers поднимают Kafka и MongoDB, чтобы
+quality check не зависел от вручную запущенного Compose. Если Docker
+недоступен, эти IT пропускаются.
 
 Alternative considered: сразу упаковать оба сервиса в Compose. Удобнее для
 ручного e2e, но требует Dockerfiles, image tags и ещё один deployment surface
