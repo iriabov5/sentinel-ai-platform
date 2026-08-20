@@ -1,0 +1,10 @@
+micronaut:
+  application:
+    name: event-ingestion-service
+  server:
+    port: 8081
+
+endpoints:
+  health:
+    enabled: true
+    sensitive: false
