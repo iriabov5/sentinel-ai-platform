@@ -17,7 +17,13 @@ sonar {
     properties {
         property("sonar.projectKey", "sentinel-ai-platform")
         property("sonar.projectName", "Sentinel AI Platform")
-        property("sonar.host.url", "http://localhost:9000")
+        property(
+            "sonar.host.url",
+            providers.gradleProperty("sonarHostUrl")
+                .orElse(providers.environmentVariable("SONAR_HOST_URL"))
+                .orElse("http://localhost:9000")
+                .get()
+        )
         property("sonar.sourceEncoding", "UTF-8")
     }
 }

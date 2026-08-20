@@ -1,5 +1,6 @@
 package com.ryabov.sentinelai.ingestion.service
 
+import com.ryabov.sentinelai.ingestion.configuration.IngestionMetadataProperties
 import com.ryabov.sentinelai.ingestion.model.SecurityEventAcceptanceStatus
 import com.ryabov.sentinelai.ingestion.model.SecurityEventRequest
 import com.ryabov.sentinelai.ingestion.model.SecurityEventSource
@@ -20,7 +21,7 @@ import java.util.UUID
 @DisplayName("Acceptance service security events")
 class SecurityEventAcceptanceServiceTest {
 
-    private val service = SecurityEventAcceptanceService()
+    private val service = SecurityEventAcceptanceService(testMetadataProperties())
 
     @Test
     @DisplayName("Создает acceptance response для valid event")
@@ -56,6 +57,27 @@ class SecurityEventAcceptanceServiceTest {
         assertEquals(HttpStatus.BAD_REQUEST, exception.status)
     }
 
+    @Test
+    @DisplayName("Отклоняет metadata с количеством entries выше configured limit")
+    fun `too many metadata entries are rejected`() {
+        val exception = assertThrows(HttpStatusException::class.java) {
+            runBlocking {
+                service.accept(
+                    validRequest().copy(
+                        metadata = mapOf(
+                            "one" to "1",
+                            "two" to "2",
+                            "three" to "3",
+                            "four" to "4"
+                        )
+                    )
+                )
+            }
+        }
+
+        assertEquals(HttpStatus.BAD_REQUEST, exception.status)
+    }
+
     private fun validRequest(): SecurityEventRequest =
         SecurityEventRequest(
             eventType = SecurityEventType.LOGIN_FAILED,
@@ -69,4 +91,11 @@ class SecurityEventAcceptanceServiceTest {
             ),
             metadata = mapOf("reason" to "INVALID_PASSWORD")
         )
+
+    private fun testMetadataProperties(): IngestionMetadataProperties =
+        object : IngestionMetadataProperties {
+            override val maxEntries: Int = 3
+            override val maxKeyLength: Int = 64
+            override val maxValueLength: Int = 512
+        }
 }
