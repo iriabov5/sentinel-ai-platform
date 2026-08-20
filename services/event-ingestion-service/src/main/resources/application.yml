@@ -1,0 +1,17 @@
+micronaut:
+  application:
+    name: event-ingestion-service
+  server:
+    port: ${EVENT_INGESTION_SERVICE_PORT:8081}
+
+sentinel:
+  ingestion:
+    metadata:
+      max-entries: ${EVENT_INGESTION_METADATA_MAX_ENTRIES:25}
+      max-key-length: ${EVENT_INGESTION_METADATA_MAX_KEY_LENGTH:64}
+      max-value-length: ${EVENT_INGESTION_METADATA_MAX_VALUE_LENGTH:512}
+
+endpoints:
+  health:
+    enabled: true
+    sensitive: false

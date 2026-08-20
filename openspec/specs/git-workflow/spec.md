@@ -48,28 +48,29 @@ Agent SHALL NOT создавать commits напрямую в `main`, `master` 
 - **AND** branch name SHALL быть на английском, в kebab-case и отражать суть
   fix
 
-### Requirement: Commit request включает push и PR
-Просьба пользователя commit SHALL означать полный delivery loop: commit в
-рабочую branch, push этой branch и pull request в `dev`, если remote repository
-и GitHub access доступны.
+### Requirement: Agent не выполняет push без явного разрешения
+Просьба пользователя commit SHALL означать только local commit в рабочей branch.
+Push в remote выполняет пользователь, если он отдельно не разрешил agent push
+для конкретной задачи.
 
 #### Scenario: Пользователь просит commit
 - **WHEN** пользователь просит commit
 - **THEN** agent SHALL создать commit в `feature/` или `bugfix/` branch
-- **AND** agent SHALL push эту branch в `origin`, если remote доступен
-- **AND** agent SHALL открыть pull request в `dev`, если GitHub access доступен
-- **AND** agent SHALL остановиться после PR и дождаться review пользователя
+- **AND** agent SHALL NOT push эту branch в `origin`
+- **AND** agent SHALL NOT открывать pull request без explicit request
+- **AND** agent SHALL сообщить user branch name, commit hash и suggested push
+  command
 - **AND** agent SHALL NOT выполнять merge в `dev`, `main` или `master`
 
 ### Requirement: Existing PR обновляется, а не дублируется
-Если для текущей рабочей branch уже есть open PR, agent SHALL обновлять этот PR
-новыми commits вместо создания duplicate PR.
+Если для текущей рабочей branch уже есть open PR, agent SHALL обновлять local
+branch новыми commits, но SHALL NOT push updates без explicit user approval.
 
 #### Scenario: PR уже существует
 - **GIVEN** для текущей `feature/` или `bugfix/` branch уже открыт PR в `dev`
 - **WHEN** пользователь просит commit связанных изменений
 - **THEN** agent SHALL добавить commit в текущую branch
-- **AND** agent SHALL push обновление существующего PR
+- **AND** agent SHALL сообщить user, что branch нужно push для обновления PR
 - **AND** agent SHALL NOT создавать duplicate PR
 
 ### Requirement: Review и merge выполняет пользователь
@@ -81,4 +82,3 @@ branches.
 - **THEN** user SHALL выполнить review
 - **AND** agent SHALL NOT считать change принятым до user merge
 - **AND** agent SHALL NOT продвигать changes из `dev` в `main` или `master`
-
