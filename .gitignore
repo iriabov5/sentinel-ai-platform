@@ -1,0 +1,44 @@
+.DS_Store
+
+# IDEs and editors
+.idea/
+.vscode/
+
+# Build outputs
+build/
+out/
+target/
+.gradle/
+
+# JVM
+*.class
+*.jar
+*.war
+*.ear
+hs_err_pid*
+
+# Kotlin
+.kotlin/
+
+# Node / frontend
+node_modules/
+dist/
+coverage/
+.vite/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Local env and secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log

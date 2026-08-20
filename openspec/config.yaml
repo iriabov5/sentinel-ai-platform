@@ -1,0 +1,150 @@
+schema: spec-driven
+
+# Project context (optional)
+# This is shown to AI when creating artifacts.
+# Add your tech stack, conventions, style guides, domain knowledge, etc.
+# Example:
+#   context: |
+#     Tech stack: TypeScript, React, Node.js
+#     We use conventional commits
+#     Domain: e-commerce platform
+context: |
+  Product name: Sentinel AI Platform.
+  Current repository/folder slug: ai-security-platform.
+  Preferred future repository slug if renamed: sentinel-ai-platform.
+
+  Это production-oriented AI-powered SIEM/UEBA platform для cybersecurity
+  behavior analytics и anomaly detection. Платформа собирает security events,
+  строит behavioral context, ищет anomalies, создает incidents и помогает
+  security analyst расследовать suspicious behavior. Репозиторий должен
+  выглядеть и развиваться как настоящая production-система, а не как toy
+  tutorial.
+
+  Основной backend stack:
+  - Kotlin
+  - Micronaut
+  - Gradle Kotlin DSL
+  - Kotlin Coroutines там, где они естественно подходят
+
+  Планируемый platform stack:
+  - Kafka для asynchronous event flow
+  - MongoDB для большого объема неоднородных security/behavior events
+  - PostgreSQL для transactional domain entities: incidents, users, roles,
+    permissions, policies, investigation state
+  - Redis только для обоснованных short-lived state, caching, rate limiting,
+    deduplication, counters или coordination
+  - Python, FastAPI, PyTorch и scikit-learn для AI/ML detection service
+  - React и TypeScript для security analyst dashboard
+  - Go позже для lightweight security-agent / event-collector, если появится
+    approved OpenSpec change
+  - Docker Compose для local development
+  - Railway как первый cloud/demo deployment target
+  - Kubernetes позже, без привязки application code к Railway
+  - OpenTelemetry, Prometheus и Grafana для observability
+
+  Architecture style:
+  - Monorepo с сервисами, которые можно собирать и деплоить независимо.
+  - Specification-driven development через OpenSpec.
+  - Contract-first REST APIs через OpenAPI 3.x.
+  - Contract-first Kafka events через AsyncAPI и явный schema format, например
+    JSON Schema или Avro. Формат выбирается через architecture reasoning.
+  - Маленькие incremental changes вместо генерации всей платформы сразу.
+  - OpenSpec documentation пишется на русском, технические термины могут
+    оставаться на английском.
+
+  Target services:
+  - event-ingestion-service: принимает security events, валидирует,
+    нормализует и публикует их в Kafka.
+  - behavior-analysis-service: читает Kafka events, хранит behavioral history в
+    MongoDB, готовит features.
+  - ai-detection-service: Python/FastAPI/PyTorch service для anomaly score и
+    explainable reasons.
+  - incident-service: создает и ведет incidents, хранит transactional state в
+    PostgreSQL.
+  - notification-service: слушает incident events и отправляет alerts.
+  - identity-access-service: users, roles, access policies для dashboard и APIs.
+  - security-dashboard: React/TypeScript frontend для analyst investigation.
+  - future security-agent / event-collector: Go component для сбора local
+    security events рядом с applications, servers или infrastructure sources.
+
+  Deployment principles:
+  - Платформа должна запускаться локально через Docker Compose.
+  - Платформа должна деплоиться из monorepo в Railway.
+  - Платформа должна оставаться cloud-provider agnostic.
+  - Сервисы должны настраиваться через environment variables.
+  - У каждого deployable service должны быть понятные ownership, ports,
+    health checks и runtime dependencies.
+
+  Initial product flow:
+  Applications и security agents отправляют events в event ingestion service.
+  Ingestion service валидирует events и публикует их в Kafka.
+  Behavior analysis service читает events, сохраняет behavioral history в
+  MongoDB, извлекает features и вызывает AI detection service.
+  High-risk anomalies могут превращаться в incidents, которыми управляет
+  incident service в PostgreSQL и которые отображаются в security analyst
+  dashboard.
+
+  Important development rule:
+  Не реализовывать business functionality напрямую из неформального запроса,
+  если это изменение должно быть представлено как OpenSpec change. Для значимых
+  изменений поведения или архитектуры сначала создаются или обновляются
+  proposal, specs, design и tasks. Implementation начинается только после review
+  и явного apply.
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
+rules:
+  proposal:
+    - Держать change достаточно маленьким, чтобы его можно было независимо
+      review и implement.
+    - Явно указывать non-goals, чтобы future platform work не затягивался
+      слишком рано.
+    - Указывать, влияет ли change на local Docker Compose, Railway deployment,
+      Kubernetes readiness или ни на что из этого.
+  specs:
+    - Описывать externally observable behavior и contracts до implementation.
+    - Включать REST, Kafka, persistence и security expectations, когда это
+      релевантно.
+    - Предпочитать явные event и API contracts вместо implicit behavior в code.
+  design:
+    - Объяснять service boundaries, data ownership, failure modes и deployment
+      implications, когда change касается architecture.
+    - Обосновывать добавление Kafka, MongoDB, PostgreSQL, Redis, AI/ML или
+      frontend, а не добавлять технологию только потому, что она запланирована
+      позже.
+    - Учитывать Railway compatibility и local execution через Docker Compose.
+  tasks:
+    - Включать tests и verification как часть change.
+    - Избегать tasks, которые scaffold unrelated future services или placeholder
+      code.
+    - Предпочитать runnable и понятный vertical slice широкому skeleton, который
+      не работает end to end.
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing
+operations:
+  apply:
+    guidance:
+      - Реализовывать только approved change scope.
+      - Проверять behavior через focused tests или runnable checks.
+      - Не добавлять незаметно Spring Boot dependencies в Micronaut services.
+  archive:
+    guidance:
+      - Кратко описывать, что изменилось в main specs и что остается для later
+        OpenSpec changes.
