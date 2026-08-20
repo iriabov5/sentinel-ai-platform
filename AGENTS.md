@@ -97,9 +97,26 @@ openspec validate --all --strict --no-interactive
 ./gradlew sonar -Dsonar.token=<token>
 ```
 
-SonarQube запускается локально и не является runtime dependency. Token не
-хранится в repository. Если SonarQube недоступен, tests/coverage все равно
-обязательны, а факт пропуска SonarQube analysis нужно явно сообщить.
+SonarQube не является runtime dependency. `sonar.host.url` должен приходить из
+Gradle property `sonarHostUrl`, environment variable `SONAR_HOST_URL` или
+local-only fallback `http://localhost:9000`. Token не хранится в repository и
+передается через `SONAR_TOKEN`, `-Dsonar.token=...` или user-level Gradle config.
+Если SonarQube недоступен, tests/coverage все равно обязательны, а факт
+пропуска SonarQube analysis нужно явно сообщить.
+
+## Конфигурация
+
+Repository хранит только safe defaults и examples. Значения, которые отличаются
+между local, test, dev, staging, prod-like deployment или CI, должны приходить
+через environment variables, system properties, Gradle properties, Railway
+variables, Kubernetes ConfigMaps/Secrets или другой внешний механизм.
+
+Не коммить реальные `.env`, credentials, tokens, passwords, private URLs или
+секретные deployment values. Для локальных подсказок используй `.env.example`.
+
+В Kotlin/Micronaut services runtime-настройки оформляй через typed
+`@ConfigurationProperties` с validation и русским KDoc, если смысл параметров не
+очевиден. Не читай environment variables напрямую в business logic.
 
 ## Git
 

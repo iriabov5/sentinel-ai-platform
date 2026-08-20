@@ -18,6 +18,7 @@ dependencies {
     ksp("io.micronaut:micronaut-http-validation")
     ksp("io.micronaut.openapi:micronaut-openapi")
     ksp("io.micronaut.serde:micronaut-serde-processor")
+    ksp("io.micronaut:micronaut-inject-java")
     ksp("io.micronaut.validation:micronaut-validation-processor")
 
     implementation("io.micronaut:micronaut-http-client")

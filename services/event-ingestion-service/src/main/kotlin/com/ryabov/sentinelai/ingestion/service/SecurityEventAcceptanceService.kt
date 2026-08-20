@@ -1,5 +1,6 @@
 package com.ryabov.sentinelai.ingestion.service
 
+import com.ryabov.sentinelai.ingestion.configuration.IngestionMetadataProperties
 import com.ryabov.sentinelai.ingestion.model.SecurityEventAcceptedResponse
 import com.ryabov.sentinelai.ingestion.model.SecurityEventAcceptanceStatus
 import com.ryabov.sentinelai.ingestion.model.SecurityEventRequest
@@ -17,7 +18,9 @@ import java.util.UUID
  * отдельными OpenSpec changes.
  */
 @Singleton
-open class SecurityEventAcceptanceService {
+open class SecurityEventAcceptanceService(
+    private val metadataProperties: IngestionMetadataProperties
+) {
 
     /**
      * Принимает уже провалидированный Micronaut request и возвращает результат
@@ -37,21 +40,29 @@ open class SecurityEventAcceptanceService {
     }
 
     private fun validateMetadata(request: SecurityEventRequest) {
+        if (request.metadata.size > metadataProperties.maxEntries) {
+            throw HttpStatusException(
+                HttpStatus.BAD_REQUEST,
+                "metadata entries count must be <= ${metadataProperties.maxEntries}"
+            )
+        }
+
         request.metadata.forEach { (key, value) ->
             if (key.isBlank()) {
                 throw HttpStatusException(HttpStatus.BAD_REQUEST, "metadata keys must not be blank")
             }
-            if (key.length > MAX_METADATA_KEY_LENGTH) {
-                throw HttpStatusException(HttpStatus.BAD_REQUEST, "metadata key length must be <= $MAX_METADATA_KEY_LENGTH")
+            if (key.length > metadataProperties.maxKeyLength) {
+                throw HttpStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "metadata key length must be <= ${metadataProperties.maxKeyLength}"
+                )
             }
-            if (value.length > MAX_METADATA_VALUE_LENGTH) {
-                throw HttpStatusException(HttpStatus.BAD_REQUEST, "metadata value length must be <= $MAX_METADATA_VALUE_LENGTH")
+            if (value.length > metadataProperties.maxValueLength) {
+                throw HttpStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "metadata value length must be <= ${metadataProperties.maxValueLength}"
+                )
             }
         }
-    }
-
-    companion object {
-        const val MAX_METADATA_KEY_LENGTH = 64
-        const val MAX_METADATA_VALUE_LENGTH = 512
     }
 }
