@@ -1,41 +1,58 @@
 package com.ryabov.sentinelai.ingestion.service
 
 import com.ryabov.sentinelai.ingestion.configuration.IngestionMetadataProperties
+import com.ryabov.sentinelai.ingestion.model.AcceptedSecurityEvent
 import com.ryabov.sentinelai.ingestion.model.SecurityEventAcceptedResponse
 import com.ryabov.sentinelai.ingestion.model.SecurityEventAcceptanceStatus
 import com.ryabov.sentinelai.ingestion.model.SecurityEventRequest
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.exceptions.HttpStatusException
 import jakarta.inject.Singleton
+import java.time.Instant
 import java.util.UUID
 
 /**
  * Application service для acceptance-этапа приема security events.
  *
- * Сервис проверяет bounded metadata rules и создает acceptance response с
- * техническим `eventId`. На этом этапе он сознательно не публикует событие в
- * Kafka и не пишет данные в storage: эти responsibilities будут добавлены
- * отдельными OpenSpec changes.
+ * Сервис проверяет bounded metadata rules, создает `eventId` и публикует
+ * accepted event в Kafka. `202 Accepted` возвращается только после успешной
+ * публикации.
  */
 @Singleton
 open class SecurityEventAcceptanceService(
-    private val metadataProperties: IngestionMetadataProperties
+    private val metadataProperties: IngestionMetadataProperties,
+    private val eventPublisher: AcceptedSecurityEventPublisher
 ) {
 
     /**
-     * Принимает уже провалидированный Micronaut request и возвращает результат
-     * первичного приема события.
+     * Принимает уже провалидированный Micronaut request, публикует событие и
+     * возвращает результат приема.
      *
-     * Метод остается `suspend`, чтобы service layer был готов к будущим
-     * неблокирующим операциям, например Kafka producer с timeout/failure rules.
+     * Если Kafka publish не удался, метод бросает `503`, чтобы клиент не получил
+     * success для unpublished event.
      */
     suspend fun accept(request: SecurityEventRequest): SecurityEventAcceptedResponse {
         validateMetadata(request)
 
+        val eventId = UUID.randomUUID().toString()
+        val receivedAt = Instant.now()
+        val acceptedEvent = request.toAcceptedEvent(eventId, receivedAt)
+
+        try {
+            eventPublisher.publish(acceptedEvent)
+        } catch (ex: HttpStatusException) {
+            throw ex
+        } catch (ex: Exception) {
+            throw HttpStatusException(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "Failed to publish security event to Kafka"
+            )
+        }
+
         return SecurityEventAcceptedResponse(
-            eventId = UUID.randomUUID().toString(),
+            eventId = eventId,
             status = SecurityEventAcceptanceStatus.ACCEPTED,
-            receivedAt = java.time.Instant.now()
+            receivedAt = receivedAt
         )
     }
 
@@ -65,4 +82,18 @@ open class SecurityEventAcceptanceService(
             }
         }
     }
+
+    private fun SecurityEventRequest.toAcceptedEvent(
+        eventId: String,
+        receivedAt: Instant
+    ): AcceptedSecurityEvent =
+        AcceptedSecurityEvent(
+            eventId = eventId,
+            receivedAt = receivedAt,
+            eventType = requireNotNull(eventType),
+            subject = requireNotNull(subject),
+            occurredAt = requireNotNull(occurredAt),
+            source = requireNotNull(source),
+            metadata = metadata
+        )
 }

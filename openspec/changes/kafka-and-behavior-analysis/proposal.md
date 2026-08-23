@@ -45,6 +45,9 @@ end-to-end pipeline, иначе ingestion остаётся тупиковым HT
   unavailability SHALL не маскироваться успешным `202 Accepted`.
 - `security-event-contract`: публикация в `security.events.raw` больше не
   откладывается на later change и связывается с Kafka payload envelope.
+- `quality-workflow`: Kafka и MongoDB integration tests SHALL использовать
+  Testcontainers; при недоступном Docker IT пропускаются, unit tests остаются
+  обязательными.
 
 ## Impact
 

@@ -1,3 +1,6 @@
 micronaut:
   server:
     port: -1
+
+kafka:
+  enabled: false

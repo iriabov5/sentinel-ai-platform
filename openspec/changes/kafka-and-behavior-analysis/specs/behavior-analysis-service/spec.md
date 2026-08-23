@@ -104,4 +104,24 @@ local development.
 - **WHEN** implementation is complete
 - **THEN** tests SHALL cover successful consume-and-persist, duplicate
   `eventId` and dead-letter failure path
+- **AND** consume-and-persist and DLQ integration tests SHALL start Kafka and
+  MongoDB through Testcontainers
 - **AND** JaCoCo coverage verification SHALL pass before commit
+
+### Requirement: Kafka and MongoDB behavior is verified with Testcontainers
+`behavior-analysis-service` SHALL verify consume, persistence and dead-letter
+paths through Testcontainers integration tests in addition to unit tests with
+doubles.
+
+#### Scenario: Docker is available
+- **WHEN** Kafka and MongoDB integration tests run and Docker is available
+- **THEN** tests SHALL start Kafka and MongoDB through Testcontainers
+- **AND** tests SHALL persist a consumed event into owned event history
+- **AND** tests SHALL keep a single history document for duplicate `eventId`
+- **AND** tests SHALL publish a poison record to `security.events.raw.dlq`
+
+#### Scenario: Docker is unavailable
+- **WHEN** Docker is not available
+- **THEN** Testcontainers Kafka and MongoDB tests SHALL be skipped
+- **AND** unit tests SHALL still verify persist, duplicate `eventId` and
+  dead-letter behavior

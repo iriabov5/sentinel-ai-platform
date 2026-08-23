@@ -4,12 +4,26 @@ micronaut:
   server:
     port: ${EVENT_INGESTION_SERVICE_PORT:8081}
 
+kafka:
+  bootstrap:
+    servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+  producers:
+    default:
+      retries: ${EVENT_INGESTION_KAFKA_RETRIES:3}
+      acks: all
+      properties:
+        max.block.ms: ${EVENT_INGESTION_KAFKA_MAX_BLOCK_MS:2000}
+
 sentinel:
   ingestion:
     metadata:
       max-entries: ${EVENT_INGESTION_METADATA_MAX_ENTRIES:25}
       max-key-length: ${EVENT_INGESTION_METADATA_MAX_KEY_LENGTH:64}
       max-value-length: ${EVENT_INGESTION_METADATA_MAX_VALUE_LENGTH:512}
+  kafka:
+    topic: ${KAFKA_TOPIC_SECURITY_EVENTS_RAW:security.events.raw}
+    publish-timeout: ${EVENT_INGESTION_KAFKA_PUBLISH_TIMEOUT:2s}
+    retries: ${EVENT_INGESTION_KAFKA_RETRIES:3}
 
 endpoints:
   health:
