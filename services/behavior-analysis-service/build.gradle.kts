@@ -19,6 +19,7 @@ val commonsCodecVersion = providers.gradleProperty("commonsCodecVersion")
 
 dependencies {
     ksp("io.micronaut:micronaut-http-validation")
+    ksp("io.micronaut.openapi:micronaut-openapi")
     ksp("io.micronaut.serde:micronaut-serde-processor")
     ksp("io.micronaut:micronaut-inject-java")
     ksp("io.micronaut.validation:micronaut-validation-processor")
@@ -31,6 +32,7 @@ dependencies {
     implementation("io.micronaut.reactor:micronaut-reactor")
     implementation("io.micronaut.serde:micronaut-serde-jackson")
     implementation("io.micronaut.validation:micronaut-validation")
+    implementation("io.swagger.core.v3:swagger-annotations")
     implementation("jakarta.validation:jakarta.validation-api")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
@@ -148,4 +150,9 @@ tasks.matching { it.name == "sonar" }.configureEach {
     dependsOn(tasks.jacocoTestReport)
 }
 
-configure<KspExtension> {}
+configure<KspExtension> {
+    arg(
+        "micronaut.openapi.views.spec",
+        "mapping.path=swagger,swagger-ui.enabled=true,swagger-ui.theme=flattop"
+    )
+}

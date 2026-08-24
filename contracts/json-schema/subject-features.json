@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sentinel-ai.dev/schemas/subject-features.json",
+  "title": "SubjectFeatures",
+  "description": "On-demand behavioral features for a single subject, computed by behavior-analysis-service from owned event history.",
+  "type": "object",
+  "required": ["subjectId", "computedAt", "window", "features"],
+  "properties": {
+    "subjectId": {
+      "type": "string",
+      "description": "Subject identity the features were computed for."
+    },
+    "computedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Moment the feature values were computed."
+    },
+    "window": {
+      "type": "object",
+      "required": ["start", "end"],
+      "properties": {
+        "start": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Window start (inclusive)."
+        },
+        "end": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Window end (exclusive)."
+        }
+      }
+    },
+    "features": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "value", "unit", "explanation"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": [
+              "new_ip_device",
+              "unusual_time",
+              "request_rate",
+              "download_volume"
+            ]
+          },
+          "value": {
+            "type": "number",
+            "description": "Computed feature value."
+          },
+          "unit": {
+            "type": "string",
+            "description": "Unit of the feature value, e.g. count, events/hour, bytes, fraction."
+          },
+          "explanation": {
+            "type": "string",
+            "description": "Short human-readable explanation of the computed value."
+          }
+        }
+      }
+    }
+  }
+}

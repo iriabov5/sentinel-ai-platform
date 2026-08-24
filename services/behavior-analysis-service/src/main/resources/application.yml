@@ -21,6 +21,14 @@ sentinel:
   mongodb:
     database: ${MONGODB_DATABASE:behavior_analysis}
     collection: ${MONGODB_EVENT_HISTORY_COLLECTION:event_history}
+  behavior:
+    features:
+      window: ${BEHAVIOR_FEATURES_WINDOW:PT24H}
+      baseline-lookback: ${BEHAVIOR_FEATURES_BASELINE_LOOKBACK:P30D}
+      unusual-time:
+        min-events-per-hour: ${BEHAVIOR_FEATURES_UNUSUAL_TIME_MIN_EVENTS_PER_HOUR:1}
+      download-volume:
+        event-types: ${BEHAVIOR_FEATURES_DOWNLOAD_VOLUME_EVENT_TYPES:FILE_DOWNLOAD,DATA_EXPORT}
 
 endpoints:
   health:

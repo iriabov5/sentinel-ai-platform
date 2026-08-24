@@ -53,6 +53,8 @@ activity over a configured window.
 - **WHEN** subject features are requested
 - **THEN** feature SHALL sum volume of download-type events for the subject
   within the window
+- **AND** volume SHALL be read from numeric `metadata.bytes` of download-type
+  events, with missing or non-numeric values contributing zero
 - **AND** result SHALL be expressed in bytes
 
 ### Requirement: Feature response has a stable schema
