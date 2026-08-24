@@ -101,14 +101,16 @@ boundary for receiving security events.
 
 ### Requirement: Kafka raw event topic is defined
 Accepted security events SHALL be published to Kafka topic
-`security.events.raw` in the later implementation change.
+`security.events.raw`.
 
 #### Scenario: Event is accepted for downstream processing
 - **WHEN** valid event is accepted by ingestion service
-- **THEN** later Kafka producer implementation SHALL publish normalized event to
+- **THEN** Kafka producer SHALL publish normalized event to
   `security.events.raw`
 - **AND** event key SHALL preserve a stable partitioning strategy based on
-  subject or another explicitly approved key
+  `subject.id`
+- **AND** Kafka payload SHALL include `eventId` and `receivedAt` together with
+  the accepted security event envelope
 
 ### Requirement: JSON Schema is initial schema strategy
 MVP security event contract SHALL use JSON Schema as the initial payload schema
