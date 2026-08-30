@@ -15,7 +15,6 @@ import java.time.Duration
  */
 @ConfigurationProperties("sentinel.kafka")
 interface IngestionKafkaProperties {
-
     /**
      * Kafka topic для accepted security events.
      */

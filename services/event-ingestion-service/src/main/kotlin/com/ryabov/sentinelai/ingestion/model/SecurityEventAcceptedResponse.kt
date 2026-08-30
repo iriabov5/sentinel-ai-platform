@@ -7,5 +7,5 @@ import java.time.Instant
 data class SecurityEventAcceptedResponse(
     val eventId: String,
     val status: SecurityEventAcceptanceStatus,
-    val receivedAt: Instant
+    val receivedAt: Instant,
 )

@@ -17,7 +17,6 @@ import java.time.Duration
  */
 @ConfigurationProperties("sentinel.behavior.features")
 interface FeatureProperties {
-
     @get:Bindable(defaultValue = "PT24H")
     val window: Duration
 
@@ -33,7 +32,6 @@ interface FeatureProperties {
      */
     @ConfigurationProperties("unusual-time")
     interface UnusualTime {
-
         /**
          * Минимальное число событий в часе baseline, чтобы час считался
          * типичным для subject.
@@ -48,7 +46,6 @@ interface FeatureProperties {
      */
     @ConfigurationProperties("download-volume")
     interface DownloadVolume {
-
         /**
          * Event types, участвующие в подсчёте download volume.
          */

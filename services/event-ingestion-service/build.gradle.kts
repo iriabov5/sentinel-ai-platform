@@ -8,8 +8,23 @@ plugins {
     id("com.google.devtools.ksp")
     id("io.micronaut.application")
     id("io.micronaut.aot")
+    id("org.jlleitschuh.gradle.ktlint")
+    id("io.gitlab.arturbosch.detekt")
     id("org.sonarqube")
     jacoco
+}
+
+val micronautAllOpenAnnotations =
+    listOf(
+        "io.micronaut.aop.Around",
+        "io.micronaut.http.annotation.Controller",
+        "jakarta.inject.Singleton",
+        "io.micronaut.configuration.kafka.annotation.KafkaListener",
+        "io.micronaut.context.annotation.Factory",
+    )
+
+allOpen {
+    micronautAllOpenAnnotations.forEach { annotation(it) }
 }
 
 val kotlinVersion = providers.gradleProperty("kotlinVersion")
@@ -28,20 +43,19 @@ dependencies {
     implementation("io.micronaut:micronaut-management")
     implementation("io.micronaut.kafka:micronaut-kafka")
     implementation("io.micronaut.kotlin:micronaut-kotlin-runtime")
-    implementation("io.micronaut.reactor:micronaut-reactor")
     implementation("io.micronaut.serde:micronaut-serde-jackson")
     implementation("io.micronaut.validation:micronaut-validation")
     implementation("io.swagger.core.v3:swagger-annotations")
     implementation("jakarta.validation:jakarta.validation-api")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
     implementation("org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion.get()}")
-    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:${kotlinVersion.get()}")
 
     runtimeOnly("ch.qos.logback:logback-classic")
     runtimeOnly("com.fasterxml.jackson.module:jackson-module-kotlin")
     runtimeOnly("org.yaml:snakeyaml")
 
+    testImplementation(kotlin("test"))
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test")
     testImplementation("io.mockk:mockk:${mockkVersion.get()}")
     testImplementation("org.testcontainers:junit-jupiter:${testcontainersVersion.get()}")
     testImplementation("org.testcontainers:kafka:${testcontainersVersion.get()}")
@@ -52,8 +66,22 @@ dependencies {
 configure<KspExtension> {
     arg(
         "micronaut.openapi.views.spec",
-        "mapping.path=swagger,swagger-ui.enabled=true,swagger-ui.theme=flattop"
+        "mapping.path=swagger,swagger-ui.enabled=true,swagger-ui.theme=flattop",
     )
+    arg("kotlin.allopen.annotations", micronautAllOpenAnnotations.joinToString("|"))
+}
+
+ktlint {
+    filter {
+        exclude("**/generated/**")
+    }
+}
+
+detekt {
+    buildUponDefaultConfig = true
+    allRules = false
+    config.setFrom(rootProject.file("config/detekt/detekt.yml"))
+    source.setFrom("src/main/kotlin", "src/test/kotlin")
 }
 
 application {
@@ -107,16 +135,18 @@ tasks.jacocoTestReport {
         csv.required.set(false)
     }
     classDirectories.setFrom(
-        files(classDirectories.files.map {
-            fileTree(it) {
-                exclude(
-                    "**/Application*",
-                    "**/model/**",
-                    "**/kafka/*KafkaClient*",
-                    "**/configuration/CoroutineDispatcherFactory*"
-                )
-            }
-        })
+        files(
+            classDirectories.files.map {
+                fileTree(it) {
+                    exclude(
+                        "**/Application*",
+                        "**/model/**",
+                        "**/kafka/*KafkaClient*",
+                        "**/configuration/CoroutineDispatcherFactory*",
+                    )
+                }
+            },
+        ),
     )
 }
 
@@ -144,7 +174,10 @@ sonar {
         property("sonar.tests", "src/test/kotlin")
         property(
             "sonar.coverage.jacoco.xmlReportPaths",
-            layout.buildDirectory.file("reports/jacoco/test/jacocoTestReport.xml").get().asFile.absolutePath
+            layout.buildDirectory
+                .file("reports/jacoco/test/jacocoTestReport.xml")
+                .get()
+                .asFile.absolutePath,
         )
     }
 }

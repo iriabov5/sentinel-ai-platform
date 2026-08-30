@@ -7,16 +7,18 @@ import java.util.concurrent.ConcurrentLinkedQueue
 
 @Singleton
 @Requires(property = "kafka.enabled", value = "false")
-open class RecordingDeadLetterPublisher : DeadLetterPublisher {
-
+class RecordingDeadLetterPublisher : DeadLetterPublisher {
     val published: ConcurrentLinkedQueue<Pair<String, String>> = ConcurrentLinkedQueue()
 
     @Volatile
     var shouldFail: Boolean = false
 
-    override suspend fun publish(key: String, payload: String) {
+    override suspend fun publish(
+        key: String,
+        payload: String,
+    ) {
         if (shouldFail) {
-            throw IllegalStateException("DLQ unavailable")
+            error("DLQ unavailable")
         }
         published.add(key to payload)
     }

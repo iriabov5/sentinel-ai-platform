@@ -13,7 +13,6 @@ import kotlinx.coroutines.Dispatchers
  */
 @Factory
 class CoroutineDispatcherFactory {
-
     @Singleton
     @Named("io")
     fun ioDispatcher(): CoroutineDispatcher = Dispatchers.IO

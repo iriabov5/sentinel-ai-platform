@@ -12,8 +12,6 @@ import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.kafka.common.serialization.StringSerializer
 import org.bson.Document
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -26,13 +24,14 @@ import org.testcontainers.utility.DockerImageName
 import java.time.Duration
 import java.util.Properties
 import java.util.UUID
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 @MicronautTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @EnabledIf("dockerAvailable")
 @DisplayName("Kafka/Mongo integration: consume, persist, DLQ")
 class SecurityEventHistoryKafkaMongoIntegrationTest : TestPropertyProvider {
-
     @Inject
     lateinit var mongoClient: MongoClient
 
@@ -53,7 +52,7 @@ class SecurityEventHistoryKafkaMongoIntegrationTest : TestPropertyProvider {
             "sentinel.kafka.topics.raw" to RAW_TOPIC,
             "sentinel.kafka.topics.dlq" to DLQ_TOPIC,
             "sentinel.mongodb.database" to "behavior_analysis",
-            "sentinel.mongodb.collection" to COLLECTION
+            "sentinel.mongodb.collection" to COLLECTION,
         )
     }
 
@@ -85,7 +84,11 @@ class SecurityEventHistoryKafkaMongoIntegrationTest : TestPropertyProvider {
         assertTrue(record.value().contains(RAW_TOPIC))
     }
 
-    private fun publish(topic: String, key: String, value: String) {
+    private fun publish(
+        topic: String,
+        key: String,
+        value: String,
+    ) {
         KafkaProducer<String, String>(producerProperties()).use { producer ->
             producer.send(ProducerRecord(topic, key, value)).get()
             producer.flush()
@@ -118,8 +121,7 @@ class SecurityEventHistoryKafkaMongoIntegrationTest : TestPropertyProvider {
             throw AssertionError("Kafka record was not published to $topic")
         }
 
-    private fun collection() =
-        mongoClient.getDatabase("behavior_analysis").getCollection(COLLECTION)
+    private fun collection() = mongoClient.getDatabase("behavior_analysis").getCollection(COLLECTION)
 
     private fun producerProperties(): Properties =
         Properties().apply {
@@ -139,7 +141,17 @@ class SecurityEventHistoryKafkaMongoIntegrationTest : TestPropertyProvider {
         }
 
     private fun acceptedEventJson(eventId: String): String =
-        """{"eventId":"$eventId","receivedAt":"2026-08-20T10:15:00Z","eventType":"LOGIN_FAILED","subject":{"type":"USER","id":"user-123"},"occurredAt":"2026-08-20T10:14:00Z","source":{"application":"billing-api"},"metadata":{"reason":"INVALID_PASSWORD"}}"""
+        """
+        {
+          "eventId":"$eventId",
+          "receivedAt":"2026-08-20T10:15:00Z",
+          "eventType":"LOGIN_FAILED",
+          "subject":{"type":"USER","id":"user-123"},
+          "occurredAt":"2026-08-20T10:14:00Z",
+          "source":{"application":"billing-api"},
+          "metadata":{"reason":"INVALID_PASSWORD"}
+        }
+        """.trimIndent()
 
     companion object {
         private const val RAW_TOPIC = "security.events.raw"

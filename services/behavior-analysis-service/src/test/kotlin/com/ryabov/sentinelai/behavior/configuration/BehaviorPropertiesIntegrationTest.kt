@@ -2,25 +2,18 @@ package com.ryabov.sentinelai.behavior.configuration
 
 import com.ryabov.sentinelai.behavior.model.SecurityEventType
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
-import jakarta.inject.Inject
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.time.Duration
+import kotlin.test.assertEquals
 
 @MicronautTest
 @DisplayName("Конфигурация behavior-analysis-service")
-class BehaviorPropertiesIntegrationTest {
-
-    @Inject
-    lateinit var kafkaProperties: BehaviorKafkaProperties
-
-    @Inject
-    lateinit var mongoProperties: BehaviorMongoProperties
-
-    @Inject
-    lateinit var featureProperties: FeatureProperties
-
+class BehaviorPropertiesIntegrationTest(
+    private val kafkaProperties: BehaviorKafkaProperties,
+    private val mongoProperties: BehaviorMongoProperties,
+    private val featureProperties: FeatureProperties,
+) {
     @Test
     @DisplayName("Биндит safe defaults из application.yml")
     fun `binds safe defaults`() {
@@ -39,7 +32,7 @@ class BehaviorPropertiesIntegrationTest {
         assertEquals(1, featureProperties.unusualTime.minEventsPerHour)
         assertEquals(
             listOf(SecurityEventType.FILE_DOWNLOAD, SecurityEventType.DATA_EXPORT),
-            featureProperties.downloadVolume.eventTypes
+            featureProperties.downloadVolume.eventTypes,
         )
     }
 }

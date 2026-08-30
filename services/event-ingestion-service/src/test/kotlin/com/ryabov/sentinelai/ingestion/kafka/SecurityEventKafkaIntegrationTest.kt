@@ -16,8 +16,6 @@ import jakarta.inject.Inject
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.common.serialization.StringDeserializer
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
@@ -29,13 +27,15 @@ import java.time.Duration
 import java.time.Instant
 import java.util.Properties
 import java.util.UUID
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 @MicronautTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @EnabledIf("dockerAvailable")
 @DisplayName("Kafka integration: REST publish в security.events.raw")
 class SecurityEventKafkaIntegrationTest : TestPropertyProvider {
-
     @Inject
     @field:Client("/")
     lateinit var client: HttpClient
@@ -47,20 +47,21 @@ class SecurityEventKafkaIntegrationTest : TestPropertyProvider {
         return mutableMapOf(
             "kafka.enabled" to "true",
             "kafka.bootstrap.servers" to kafka.bootstrapServers,
-            "sentinel.kafka.topic" to TOPIC
+            "sentinel.kafka.topic" to TOPIC,
         )
     }
 
     @Test
     @DisplayName("Публикует accepted event в Kafka с тем же eventId и key=subject.id")
     fun `accepted event is published to kafka`() {
-        val response = client.toBlocking().exchange(
-            HttpRequest.POST("/api/v1/events", validRequest()),
-            SecurityEventAcceptedResponse::class.java
-        )
+        val response =
+            client.toBlocking().exchange(
+                HttpRequest.POST("/api/v1/events", validRequest()),
+                SecurityEventAcceptedResponse::class.java,
+            )
 
         assertEquals(HttpStatus.ACCEPTED, response.status)
-        val body = response.body()
+        val body = assertNotNull(response.body())
         val record = pollFirstRecord()
 
         assertEquals("user-123", record.key())
@@ -96,12 +97,13 @@ class SecurityEventKafkaIntegrationTest : TestPropertyProvider {
             eventType = SecurityEventType.LOGIN_FAILED,
             subject = SecurityEventSubject(type = SubjectType.USER, id = "user-123"),
             occurredAt = Instant.parse("2026-08-20T10:15:00Z"),
-            source = SecurityEventSource(
-                application = "billing-api",
-                ip = "203.0.113.42",
-                deviceId = "device-abc"
-            ),
-            metadata = mapOf("reason" to "INVALID_PASSWORD")
+            source =
+                SecurityEventSource(
+                    application = "billing-api",
+                    ip = "203.0.113.42",
+                    deviceId = "device-abc",
+                ),
+            metadata = mapOf("reason" to "INVALID_PASSWORD"),
         )
 
     companion object {

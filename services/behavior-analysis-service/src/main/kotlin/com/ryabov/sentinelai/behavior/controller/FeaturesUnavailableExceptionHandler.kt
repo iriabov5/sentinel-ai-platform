@@ -14,12 +14,11 @@ import jakarta.inject.Singleton
  */
 @Singleton
 @Produces
-open class FeaturesUnavailableExceptionHandler :
+class FeaturesUnavailableExceptionHandler :
     ExceptionHandler<FeaturesUnavailableException, HttpResponse<JsonError>> {
-
     override fun handle(
         request: HttpRequest<*>,
-        exception: FeaturesUnavailableException
+        exception: FeaturesUnavailableException,
     ): HttpResponse<JsonError> {
         val error = JsonError("Feature computation unavailable: ${exception.message}")
         return HttpResponse.status<JsonError>(HttpStatus.SERVICE_UNAVAILABLE).body(error)

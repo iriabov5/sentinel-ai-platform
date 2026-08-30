@@ -11,7 +11,7 @@ data class SubjectFeatures(
     val subjectId: String,
     val computedAt: Instant,
     val window: FeatureWindow,
-    val features: List<FeatureValue>
+    val features: List<FeatureValue>,
 )
 
 /**
@@ -20,7 +20,7 @@ data class SubjectFeatures(
 @Serdeable
 data class FeatureWindow(
     val start: Instant,
-    val end: Instant
+    val end: Instant,
 )
 
 /**
@@ -31,15 +31,17 @@ data class FeatureValue(
     val name: String,
     val value: Double,
     val unit: String,
-    val explanation: String
+    val explanation: String,
 )
 
 /**
  * Wire-имена фич, зафиксированные в контракте `behavioral-features`.
  */
-enum class FeatureName(val wireName: String) {
+enum class FeatureName(
+    val wireName: String,
+) {
     NEW_IP_DEVICE("new_ip_device"),
     UNUSUAL_TIME("unusual_time"),
     REQUEST_RATE("request_rate"),
-    DOWNLOAD_VOLUME("download_volume")
+    DOWNLOAD_VOLUME("download_volume"),
 }

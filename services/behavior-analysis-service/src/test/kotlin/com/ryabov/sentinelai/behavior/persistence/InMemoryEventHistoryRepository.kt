@@ -9,14 +9,13 @@ import java.util.concurrent.atomic.AtomicInteger
 
 @Singleton
 @Requires(property = "sentinel.persistence", value = "memory")
-open class InMemoryEventHistoryRepository : EventHistoryRepository {
-
+class InMemoryEventHistoryRepository : EventHistoryRepository {
     val documents: ConcurrentHashMap<String, EventHistoryDocument> = ConcurrentHashMap()
     private val remainingFailures = AtomicInteger(0)
 
     override suspend fun insertIgnoringDuplicateEventId(document: EventHistoryDocument) {
         if (remainingFailures.getAndUpdate { current -> if (current > 0) current - 1 else 0 } > 0) {
-            throw IllegalStateException("MongoDB unavailable")
+            error("MongoDB unavailable")
         }
         documents.putIfAbsent(document.eventId, document)
     }

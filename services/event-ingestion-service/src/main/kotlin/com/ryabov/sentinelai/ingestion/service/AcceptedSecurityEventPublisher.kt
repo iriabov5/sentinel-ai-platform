@@ -6,7 +6,6 @@ import com.ryabov.sentinelai.ingestion.model.AcceptedSecurityEvent
  * Публикует accepted security event в Kafka до возврата `202 Accepted`.
  */
 fun interface AcceptedSecurityEventPublisher {
-
     /**
      * Публикует событие с Kafka key равным `subject.id`.
      *

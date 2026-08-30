@@ -10,56 +10,56 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.apache.kafka.clients.producer.RecordMetadata
-import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeoutException
+import kotlin.test.assertIs
 
 @DisplayName("Kafka publisher accepted security events")
 class KafkaAcceptedSecurityEventPublisherTest {
-
     @Test
     @DisplayName("Публикует event с key равным subject.id")
-    fun `publishes event with subject id key`() = runBlocking {
-        val kafkaClient = mockk<AcceptedSecurityEventKafkaClient>()
-        val metadata = mockk<RecordMetadata>()
-        every { kafkaClient.send(any(), any()) } returns CompletableFuture.completedFuture(metadata)
+    fun `publishes event with subject id key`() =
+        runTest {
+            val kafkaClient = mockk<AcceptedSecurityEventKafkaClient>()
+            val metadata = mockk<RecordMetadata>()
+            every { kafkaClient.send(any(), any()) } returns CompletableFuture.completedFuture(metadata)
 
-        val publisher = KafkaAcceptedSecurityEventPublisher(
-            kafkaClient,
-            testProperties(),
-            Dispatchers.Unconfined
-        )
-        val event = acceptedEvent()
+            val publisher =
+                KafkaAcceptedSecurityEventPublisher(
+                    kafkaClient,
+                    testProperties(),
+                    Dispatchers.Unconfined,
+                )
+            val event = acceptedEvent()
 
-        publisher.publish(event)
+            publisher.publish(event)
 
-        verify { kafkaClient.send("user-123", event) }
-    }
+            verify { kafkaClient.send("user-123", event) }
+        }
 
     @Test
     @DisplayName("Пробрасывает ошибку, если Kafka publish не завершился вовремя")
-    fun `throws when kafka publish times out`() {
-        val kafkaClient = mockk<AcceptedSecurityEventKafkaClient>()
-        every { kafkaClient.send(any(), any()) } returns CompletableFuture.failedFuture(TimeoutException("timeout"))
+    fun `throws when kafka publish times out`() =
+        runTest {
+            val kafkaClient = mockk<AcceptedSecurityEventKafkaClient>()
+            every { kafkaClient.send(any(), any()) } returns CompletableFuture.failedFuture(TimeoutException("timeout"))
 
-        val publisher = KafkaAcceptedSecurityEventPublisher(
-            kafkaClient,
-            testProperties(),
-            Dispatchers.Unconfined
-        )
+            val publisher =
+                KafkaAcceptedSecurityEventPublisher(
+                    kafkaClient,
+                    testProperties(),
+                    Dispatchers.Unconfined,
+                )
 
-        assertThrows(Exception::class.java) {
-            runBlocking {
-                publisher.publish(acceptedEvent())
-            }
+            val exception = runCatching { publisher.publish(acceptedEvent()) }.exceptionOrNull()
+            assertIs<Exception>(exception)
         }
-    }
 
     private fun acceptedEvent(): AcceptedSecurityEvent =
         AcceptedSecurityEvent(
@@ -69,7 +69,7 @@ class KafkaAcceptedSecurityEventPublisherTest {
             subject = SecurityEventSubject(type = SubjectType.USER, id = "user-123"),
             occurredAt = Instant.parse("2026-08-20T10:14:00Z"),
             source = SecurityEventSource(application = "billing-api"),
-            metadata = mapOf("reason" to "INVALID_PASSWORD")
+            metadata = mapOf("reason" to "INVALID_PASSWORD"),
         )
 
     private fun testProperties(): IngestionKafkaProperties =
