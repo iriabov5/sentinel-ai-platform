@@ -8,7 +8,6 @@ import java.time.Instant
  * диапазону. Использует индекс `subject.id + occurredAt`.
  */
 fun interface EventHistoryQueryRepository {
-
     /**
      * Возвращает события subject с `occurredAt` в диапазоне `[from, to)`,
      * отсортированные по времени возникновения.
@@ -16,6 +15,6 @@ fun interface EventHistoryQueryRepository {
     suspend fun findForSubject(
         subjectId: String,
         from: Instant,
-        to: Instant
+        to: Instant,
     ): List<EventHistoryDocument>
 }

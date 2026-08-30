@@ -1,22 +1,17 @@
 package com.ryabov.sentinelai.ingestion.configuration
 
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
-import jakarta.inject.Inject
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.time.Duration
+import kotlin.test.assertEquals
 
 @MicronautTest
 @DisplayName("Конфигурация metadata limits")
-class IngestionMetadataPropertiesIntegrationTest {
-
-    @Inject
-    lateinit var properties: IngestionMetadataProperties
-
-    @Inject
-    lateinit var kafkaProperties: IngestionKafkaProperties
-
+class IngestionMetadataPropertiesIntegrationTest(
+    private val properties: IngestionMetadataProperties,
+    private val kafkaProperties: IngestionKafkaProperties,
+) {
     @Test
     @DisplayName("Биндит safe defaults из application.yml")
     fun `binds safe defaults from application yml`() {

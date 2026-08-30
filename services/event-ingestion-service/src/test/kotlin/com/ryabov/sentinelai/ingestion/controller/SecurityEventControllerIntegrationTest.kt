@@ -13,29 +13,23 @@ import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.annotation.Client
 import io.micronaut.http.client.exceptions.HttpClientResponseException
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
-import jakarta.inject.Inject
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertThrows
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.time.Instant
 import java.util.UUID
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 @MicronautTest
 @DisplayName("HTTP API приема security events")
-class SecurityEventControllerIntegrationTest {
-
-    @Inject
-    @field:Client("/")
-    lateinit var client: HttpClient
-
-    @Inject
-    lateinit var publisher: RecordingAcceptedSecurityEventPublisher
-
+class SecurityEventControllerIntegrationTest(
+    @param:Client("/") private val client: HttpClient,
+    private val publisher: RecordingAcceptedSecurityEventPublisher,
+) {
     @BeforeEach
     fun resetPublisher() {
         publisher.reset()
@@ -44,14 +38,14 @@ class SecurityEventControllerIntegrationTest {
     @Test
     @DisplayName("Возвращает 202 Accepted для valid security event")
     fun `valid event returns accepted response`() {
-        val response = client.toBlocking().exchange(
-            HttpRequest.POST("/api/v1/events", validRequest()),
-            SecurityEventAcceptedResponse::class.java
-        )
+        val response =
+            client.toBlocking().exchange(
+                HttpRequest.POST("/api/v1/events", validRequest()),
+                SecurityEventAcceptedResponse::class.java,
+            )
 
         assertEquals(HttpStatus.ACCEPTED, response.status)
-        val body = response.body()
-        assertNotNull(body)
+        val body = assertNotNull(response.body())
         UUID.fromString(body.eventId)
         assertEquals("ACCEPTED", body.status.name)
         assertNotNull(body.receivedAt)
@@ -64,16 +58,18 @@ class SecurityEventControllerIntegrationTest {
     @Test
     @DisplayName("Возвращает 400 Bad Request без required nested fields")
     fun `missing nested fields returns bad request`() {
-        val invalidRequest = validRequest().copy(
-            subject = SecurityEventSubject(type = SubjectType.USER, id = "")
-        )
-
-        val exception = assertThrows(HttpClientResponseException::class.java) {
-            client.toBlocking().exchange(
-                HttpRequest.POST("/api/v1/events", invalidRequest),
-                SecurityEventAcceptedResponse::class.java
+        val invalidRequest =
+            validRequest().copy(
+                subject = SecurityEventSubject(type = SubjectType.USER, id = ""),
             )
-        }
+
+        val exception =
+            assertFailsWith<HttpClientResponseException> {
+                client.toBlocking().exchange(
+                    HttpRequest.POST("/api/v1/events", invalidRequest),
+                    SecurityEventAcceptedResponse::class.java,
+                )
+            }
 
         assertEquals(HttpStatus.BAD_REQUEST, exception.status)
         assertTrue(publisher.published.isEmpty())
@@ -82,16 +78,18 @@ class SecurityEventControllerIntegrationTest {
     @Test
     @DisplayName("Возвращает 400 Bad Request при превышении metadata limits")
     fun `metadata limits return bad request`() {
-        val invalidRequest = validRequest().copy(
-            metadata = mapOf("x".repeat(65) to "value")
-        )
-
-        val exception = assertThrows(HttpClientResponseException::class.java) {
-            client.toBlocking().exchange(
-                HttpRequest.POST("/api/v1/events", invalidRequest),
-                SecurityEventAcceptedResponse::class.java
+        val invalidRequest =
+            validRequest().copy(
+                metadata = mapOf("x".repeat(65) to "value"),
             )
-        }
+
+        val exception =
+            assertFailsWith<HttpClientResponseException> {
+                client.toBlocking().exchange(
+                    HttpRequest.POST("/api/v1/events", invalidRequest),
+                    SecurityEventAcceptedResponse::class.java,
+                )
+            }
 
         assertEquals(HttpStatus.BAD_REQUEST, exception.status)
         assertFalse(exception.message.isNullOrBlank())
@@ -103,12 +101,13 @@ class SecurityEventControllerIntegrationTest {
     fun `kafka publish failure returns service unavailable`() {
         publisher.shouldFail = true
 
-        val exception = assertThrows(HttpClientResponseException::class.java) {
-            client.toBlocking().exchange(
-                HttpRequest.POST("/api/v1/events", validRequest()),
-                SecurityEventAcceptedResponse::class.java
-            )
-        }
+        val exception =
+            assertFailsWith<HttpClientResponseException> {
+                client.toBlocking().exchange(
+                    HttpRequest.POST("/api/v1/events", validRequest()),
+                    SecurityEventAcceptedResponse::class.java,
+                )
+            }
 
         assertEquals(HttpStatus.SERVICE_UNAVAILABLE, exception.status)
         assertTrue(publisher.published.isEmpty())
@@ -117,16 +116,18 @@ class SecurityEventControllerIntegrationTest {
     private fun validRequest(): SecurityEventRequest =
         SecurityEventRequest(
             eventType = SecurityEventType.LOGIN_FAILED,
-            subject = SecurityEventSubject(
-                type = SubjectType.USER,
-                id = "user-123"
-            ),
+            subject =
+                SecurityEventSubject(
+                    type = SubjectType.USER,
+                    id = "user-123",
+                ),
             occurredAt = Instant.parse("2026-08-20T10:15:00Z"),
-            source = SecurityEventSource(
-                application = "billing-api",
-                ip = "203.0.113.42",
-                deviceId = "device-abc"
-            ),
-            metadata = mapOf("reason" to "INVALID_PASSWORD")
+            source =
+                SecurityEventSource(
+                    application = "billing-api",
+                    ip = "203.0.113.42",
+                    deviceId = "device-abc",
+                ),
+            metadata = mapOf("reason" to "INVALID_PASSWORD"),
         )
 }

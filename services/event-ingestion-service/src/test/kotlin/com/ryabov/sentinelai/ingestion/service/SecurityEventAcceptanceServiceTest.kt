@@ -10,20 +10,19 @@ import com.ryabov.sentinelai.ingestion.model.SecurityEventType
 import com.ryabov.sentinelai.ingestion.model.SubjectType
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.exceptions.HttpStatusException
-import kotlinx.coroutines.runBlocking
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertThrows
-import org.junit.jupiter.api.Assertions.assertTrue
+import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.time.Instant
 import java.util.UUID
+import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 @DisplayName("Acceptance service security events")
 class SecurityEventAcceptanceServiceTest {
-
     private val publisher = RecordingPublisher()
     private val service = SecurityEventAcceptanceService(testMetadataProperties(), publisher)
 
@@ -34,94 +33,98 @@ class SecurityEventAcceptanceServiceTest {
 
     @Test
     @DisplayName("Создает acceptance response и публикует valid event")
-    fun `valid event creates acceptance response and publishes`() = runBlocking {
-        val response = service.accept(validRequest())
+    fun `valid event creates acceptance response and publishes`() =
+        runTest {
+            val response = service.accept(validRequest())
 
-        UUID.fromString(response.eventId)
-        assertEquals(SecurityEventAcceptanceStatus.ACCEPTED, response.status)
-        assertNotNull(response.receivedAt)
-        assertEquals(1, publisher.published.size)
-        val published = publisher.published.first()
-        assertEquals(response.eventId, published.eventId)
-        assertEquals(response.receivedAt, published.receivedAt)
-        assertEquals("user-123", published.subject.id)
-    }
+            UUID.fromString(response.eventId)
+            assertEquals(SecurityEventAcceptanceStatus.ACCEPTED, response.status)
+            assertNotNull(response.receivedAt)
+            assertEquals(1, publisher.published.size)
+            val published = publisher.published.first()
+            assertEquals(response.eventId, published.eventId)
+            assertEquals(response.receivedAt, published.receivedAt)
+            assertEquals("user-123", published.subject.id)
+        }
 
     @Test
     @DisplayName("Не публикует event при ошибке metadata validation")
-    fun `invalid metadata is not published`() {
-        val exception = assertThrows(HttpStatusException::class.java) {
-            runBlocking {
-                service.accept(validRequest().copy(metadata = mapOf(" " to "value")))
-            }
-        }
+    fun `invalid metadata is not published`() =
+        runTest {
+            val exception =
+                failure {
+                    service.accept(validRequest().copy(metadata = mapOf(" " to "value")))
+                }
 
-        assertEquals(HttpStatus.BAD_REQUEST, exception.status)
-        assertTrue(publisher.published.isEmpty())
-    }
+            assertEquals(HttpStatus.BAD_REQUEST, exception.status)
+            assertTrue(publisher.published.isEmpty())
+        }
 
     @Test
     @DisplayName("Отклоняет слишком длинное значение metadata")
-    fun `long metadata value is rejected`() {
-        val exception = assertThrows(HttpStatusException::class.java) {
-            runBlocking {
-                service.accept(validRequest().copy(metadata = mapOf("reason" to "x".repeat(513))))
-            }
-        }
+    fun `long metadata value is rejected`() =
+        runTest {
+            val exception =
+                failure {
+                    service.accept(validRequest().copy(metadata = mapOf("reason" to "x".repeat(513))))
+                }
 
-        assertEquals(HttpStatus.BAD_REQUEST, exception.status)
-        assertTrue(publisher.published.isEmpty())
-    }
+            assertEquals(HttpStatus.BAD_REQUEST, exception.status)
+            assertTrue(publisher.published.isEmpty())
+        }
 
     @Test
     @DisplayName("Отклоняет metadata с количеством entries выше configured limit")
-    fun `too many metadata entries are rejected`() {
-        val exception = assertThrows(HttpStatusException::class.java) {
-            runBlocking {
-                service.accept(
-                    validRequest().copy(
-                        metadata = mapOf(
-                            "one" to "1",
-                            "two" to "2",
-                            "three" to "3",
-                            "four" to "4"
-                        )
+    fun `too many metadata entries are rejected`() =
+        runTest {
+            val exception =
+                failure {
+                    service.accept(
+                        validRequest().copy(
+                            metadata =
+                                mapOf(
+                                    "one" to "1",
+                                    "two" to "2",
+                                    "three" to "3",
+                                    "four" to "4",
+                                ),
+                        ),
                     )
-                )
-            }
-        }
+                }
 
-        assertEquals(HttpStatus.BAD_REQUEST, exception.status)
-        assertTrue(publisher.published.isEmpty())
-    }
+            assertEquals(HttpStatus.BAD_REQUEST, exception.status)
+            assertTrue(publisher.published.isEmpty())
+        }
 
     @Test
     @DisplayName("Возвращает 503, если Kafka publish завершился ошибкой")
-    fun `kafka publish failure returns service unavailable`() {
-        publisher.shouldFail = true
+    fun `kafka publish failure returns service unavailable`() =
+        runTest {
+            publisher.shouldFail = true
 
-        val exception = assertThrows(HttpStatusException::class.java) {
-            runBlocking {
-                service.accept(validRequest())
-            }
+            val exception = failure { service.accept(validRequest()) }
+
+            assertEquals(HttpStatus.SERVICE_UNAVAILABLE, exception.status)
+            assertTrue(publisher.published.isEmpty())
         }
 
-        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, exception.status)
-        assertTrue(publisher.published.isEmpty())
-    }
+    private suspend fun failure(block: suspend () -> Unit): HttpStatusException =
+        assertIs(runCatching { block() }.exceptionOrNull())
 
     private fun validRequest(): SecurityEventRequest =
         SecurityEventRequest(
             eventType = SecurityEventType.LOGIN_FAILED,
-            subject = SecurityEventSubject(
-                type = SubjectType.USER,
-                id = "user-123"
-            ),
+            subject =
+                SecurityEventSubject(
+                    type = SubjectType.USER,
+                    id = "user-123",
+                ),
             occurredAt = Instant.parse("2026-08-20T10:15:00Z"),
-            source = SecurityEventSource(
-                application = "billing-api"
-            ),
-            metadata = mapOf("reason" to "INVALID_PASSWORD")
+            source =
+                SecurityEventSource(
+                    application = "billing-api",
+                ),
+            metadata = mapOf("reason" to "INVALID_PASSWORD"),
         )
 
     private fun testMetadataProperties(): IngestionMetadataProperties =
@@ -137,7 +140,7 @@ class SecurityEventAcceptanceServiceTest {
 
         override suspend fun publish(event: AcceptedSecurityEvent) {
             if (shouldFail) {
-                throw IllegalStateException("Kafka unavailable")
+                error("Kafka unavailable")
             }
             published += event
         }

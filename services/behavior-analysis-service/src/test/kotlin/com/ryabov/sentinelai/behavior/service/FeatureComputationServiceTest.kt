@@ -9,175 +9,210 @@ import com.ryabov.sentinelai.behavior.model.SecurityEventType
 import com.ryabov.sentinelai.behavior.model.SubjectType
 import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.runBlocking
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertThrows
-import org.junit.jupiter.api.Assertions.assertTrue
+import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
+import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertTrue
 
 @DisplayName("Feature computation service")
 class FeatureComputationServiceTest {
-
     private val now = Instant.parse("2026-08-20T12:00:00Z")
 
     @Test
     @DisplayName("Считает new_ip_device по IP/device, отсутствующим в baseline")
-    fun `new_ip_device counts ips and devices unseen in baseline`() = runBlocking {
-        val service = service(
-            events = listOf(
-                event("b1", now.minus(Duration.ofDays(2)), ip = "10.0.0.1", deviceId = "dev-1"),
-                event("w1", now.minus(Duration.ofHours(1)), ip = "10.0.0.1", deviceId = "dev-1"),
-                event("w2", now.minus(Duration.ofHours(2)), ip = "203.0.113.7", deviceId = "dev-2")
-            )
-        )
+    fun `new_ip_device counts ips and devices unseen in baseline`() =
+        runTest {
+            val service =
+                service(
+                    events =
+                        listOf(
+                            event("b1", now.minus(Duration.ofDays(2)), ip = "10.0.0.1", deviceId = "dev-1"),
+                            event("w1", now.minus(Duration.ofHours(1)), ip = "10.0.0.1", deviceId = "dev-1"),
+                            event("w2", now.minus(Duration.ofHours(2)), ip = "203.0.113.7", deviceId = "dev-2"),
+                        ),
+                )
 
-        val features = service.computeFeatures(SUBJECT, now).features
-        val feature = features.first { it.name == FeatureName.NEW_IP_DEVICE.wireName }
+            val features = service.computeFeatures(SUBJECT, now).features
+            val feature = features.first { it.name == FeatureName.NEW_IP_DEVICE.wireName }
 
-        assertEquals(2.0, feature.value)
-        assertTrue(feature.explanation.contains("203.0.113.7"))
-        assertTrue(feature.explanation.contains("dev-2"))
-    }
+            assertEquals(2.0, feature.value)
+            assertTrue(feature.explanation.contains("203.0.113.7"))
+            assertTrue(feature.explanation.contains("dev-2"))
+        }
 
     @Test
     @DisplayName("unusual_time считает долю событий вне типичных часов")
-    fun `unusual_time computes fraction of events outside typical hours`() = runBlocking {
-        val service = service(
-            minEventsPerHour = 1,
-            events = listOf(
-                event("b1", utc(9, 0, dayOffset = 1)),
-                event("b2", utc(9, 30, dayOffset = 1)),
-                event("w1", utc(9, 45)),
-                event("w2", utc(3, 0))
-            )
-        )
+    fun `unusual_time computes fraction of events outside typical hours`() =
+        runTest {
+            val service =
+                service(
+                    minEventsPerHour = 1,
+                    events =
+                        listOf(
+                            event("b1", utc(9, 0, dayOffset = 1)),
+                            event("b2", utc(9, 30, dayOffset = 1)),
+                            event("w1", utc(9, 45)),
+                            event("w2", utc(3, 0)),
+                        ),
+                )
 
-        val features = service.computeFeatures(SUBJECT, now).features
-        val feature = features.first { it.name == FeatureName.UNUSUAL_TIME.wireName }
+            val features = service.computeFeatures(SUBJECT, now).features
+            val feature = features.first { it.name == FeatureName.UNUSUAL_TIME.wireName }
 
-        assertEquals(0.5, feature.value)
-        assertTrue(feature.explanation.contains("typical hours: 9"))
-    }
+            assertEquals(0.5, feature.value)
+            assertTrue(feature.explanation.contains("typical hours: 9"))
+        }
 
     @Test
     @DisplayName("request_rate считает события в час")
-    fun `request_rate computes events per hour`() = runBlocking {
-        val service = service(
-            window = Duration.ofHours(2),
-            events = (0 until 10).map { i ->
-                event("w$i", now.minus(Duration.ofMinutes(((i + 1) * 10).toLong())))
-            }
-        )
+    fun `request_rate computes events per hour`() =
+        runTest {
+            val service =
+                service(
+                    window = Duration.ofHours(2),
+                    events =
+                        (0 until 10).map { i ->
+                            event("w$i", now.minus(Duration.ofMinutes(((i + 1) * 10).toLong())))
+                        },
+                )
 
-        val features = service.computeFeatures(SUBJECT, now).features
-        val feature = features.first { it.name == FeatureName.REQUEST_RATE.wireName }
+            val features = service.computeFeatures(SUBJECT, now).features
+            val feature = features.first { it.name == FeatureName.REQUEST_RATE.wireName }
 
-        assertEquals(5.0, feature.value)
-    }
+            assertEquals(5.0, feature.value)
+            assertTrue(feature.explanation.contains("2h"))
+        }
+
+    @Test
+    @DisplayName("request_rate объясняет окно в минутах, если оно не кратно часу")
+    fun `request_rate explains non-hour window in minutes`() =
+        runTest {
+            val service =
+                service(
+                    window = Duration.ofMinutes(90),
+                    events = listOf(event("w1", now.minus(Duration.ofMinutes(30)))),
+                )
+
+            val features = service.computeFeatures(SUBJECT, now).features
+            val feature = features.first { it.name == FeatureName.REQUEST_RATE.wireName }
+
+            assertTrue(feature.explanation.contains("90 minutes"))
+        }
 
     @Test
     @DisplayName("download_volume суммирует metadata.bytes download-событий, пропуская отсутствующие значения")
-    fun `download_volume sums metadata bytes and ignores missing values`() = runBlocking {
-        val service = service(
-            events = listOf(
-                event(
-                    "w1",
-                    now.minus(Duration.ofHours(1)),
-                    type = SecurityEventType.FILE_DOWNLOAD,
-                    metadata = mapOf("bytes" to "100")
-                ),
-                event(
-                    "w2",
-                    now.minus(Duration.ofHours(1)),
-                    type = SecurityEventType.FILE_DOWNLOAD,
-                    metadata = mapOf("fileName" to "report.pdf")
-                ),
-                event(
-                    "w3",
-                    now.minus(Duration.ofHours(1)),
-                    type = SecurityEventType.DATA_EXPORT,
-                    metadata = mapOf("bytes" to "50")
-                ),
-                event(
-                    "w4",
-                    now.minus(Duration.ofHours(1)),
-                    type = SecurityEventType.LOGIN_FAILED,
-                    metadata = mapOf("bytes" to "999")
-                ),
-                event(
-                    "w5",
-                    now.minus(Duration.ofHours(1)),
-                    type = SecurityEventType.FILE_DOWNLOAD,
-                    metadata = mapOf("bytes" to "not-a-number")
+    fun `download_volume sums metadata bytes and ignores missing values`() =
+        runTest {
+            val service =
+                service(
+                    events =
+                        listOf(
+                            event(
+                                "w1",
+                                now.minus(Duration.ofHours(1)),
+                                type = SecurityEventType.FILE_DOWNLOAD,
+                                metadata = mapOf("bytes" to "100"),
+                            ),
+                            event(
+                                "w2",
+                                now.minus(Duration.ofHours(1)),
+                                type = SecurityEventType.FILE_DOWNLOAD,
+                                metadata = mapOf("fileName" to "report.pdf"),
+                            ),
+                            event(
+                                "w3",
+                                now.minus(Duration.ofHours(1)),
+                                type = SecurityEventType.DATA_EXPORT,
+                                metadata = mapOf("bytes" to "50"),
+                            ),
+                            event(
+                                "w4",
+                                now.minus(Duration.ofHours(1)),
+                                type = SecurityEventType.LOGIN_FAILED,
+                                metadata = mapOf("bytes" to "999"),
+                            ),
+                            event(
+                                "w5",
+                                now.minus(Duration.ofHours(1)),
+                                type = SecurityEventType.FILE_DOWNLOAD,
+                                metadata = mapOf("bytes" to "not-a-number"),
+                            ),
+                        ),
                 )
-            )
-        )
 
-        val features = service.computeFeatures(SUBJECT, now).features
-        val feature = features.first { it.name == FeatureName.DOWNLOAD_VOLUME.wireName }
+            val features = service.computeFeatures(SUBJECT, now).features
+            val feature = features.first { it.name == FeatureName.DOWNLOAD_VOLUME.wireName }
 
-        assertEquals(150.0, feature.value)
-    }
+            assertEquals(150.0, feature.value)
+        }
 
     @Test
     @DisplayName("Пустая history возвращает нулевые значения всех фич")
-    fun `empty history returns zero feature values`() = runBlocking {
-        val service = service(events = emptyList())
+    fun `empty history returns zero feature values`() =
+        runTest {
+            val service = service(events = emptyList())
 
-        val result = service.computeFeatures(SUBJECT, now)
+            val result = service.computeFeatures(SUBJECT, now)
 
-        assertEquals(SUBJECT, result.subjectId)
-        assertEquals(now, result.computedAt)
-        assertEquals(FeatureName.entries.size, result.features.size)
-        result.features.forEach { assertEquals(0.0, it.value) }
-    }
+            assertEquals(SUBJECT, result.subjectId)
+            assertEquals(now, result.computedAt)
+            assertEquals(FeatureName.entries.size, result.features.size)
+            result.features.forEach { assertEquals(0.0, it.value) }
+        }
 
     @Test
     @DisplayName("Сбой чтения history транслируется в FeaturesUnavailableException")
-    fun `repository failure becomes FeaturesUnavailableException`() {
-        val service = FeatureComputationService(
-            queryRepository = EventHistoryQueryRepository { _, _, _ ->
-                throw IllegalStateException("MongoDB unavailable")
-            },
-            featureProperties = properties()
-        )
+    fun `repository failure becomes FeaturesUnavailableException`() =
+        runTest {
+            val service =
+                FeatureComputationService(
+                    queryRepository =
+                        EventHistoryQueryRepository { _, _, _ ->
+                            error("MongoDB unavailable")
+                        },
+                    featureProperties = properties(),
+                )
 
-        assertThrows(FeaturesUnavailableException::class.java) {
-            runBlocking { service.computeFeatures(SUBJECT, now) }
+            val exception = runCatching { service.computeFeatures(SUBJECT, now) }.exceptionOrNull()
+            assertIs<FeaturesUnavailableException>(exception)
         }
-    }
 
     private fun service(
         window: Duration = Duration.ofHours(24),
         minEventsPerHour: Int = 1,
-        events: List<EventHistoryDocument>
+        events: List<EventHistoryDocument>,
     ): FeatureComputationService =
         FeatureComputationService(
-            queryRepository = EventHistoryQueryRepository { subjectId, from, to ->
-                events
-                    .filter { it.subject.id == subjectId && it.occurredAt >= from && it.occurredAt < to }
-                    .sortedBy { it.occurredAt }
-            },
-            featureProperties = properties(window, minEventsPerHour)
+            queryRepository =
+                EventHistoryQueryRepository { subjectId, from, to ->
+                    events
+                        .filter { it.subject.id == subjectId && it.occurredAt >= from && it.occurredAt < to }
+                        .sortedBy { it.occurredAt }
+                },
+            featureProperties = properties(window, minEventsPerHour),
         )
 
     private fun properties(
         featureWindow: Duration = Duration.ofHours(24),
-        minEvents: Int = 1
+        minEvents: Int = 1,
     ): FeatureProperties {
-        val unusualTimeMock = mockk<FeatureProperties.UnusualTime> {
-            every { minEventsPerHour } returns minEvents
-        }
-        val downloadVolumeMock = mockk<FeatureProperties.DownloadVolume> {
-            every { eventTypes } returns listOf(
-                SecurityEventType.FILE_DOWNLOAD,
-                SecurityEventType.DATA_EXPORT
-            )
-        }
+        val unusualTimeMock =
+            mockk<FeatureProperties.UnusualTime> {
+                every { minEventsPerHour } returns minEvents
+            }
+        val downloadVolumeMock =
+            mockk<FeatureProperties.DownloadVolume> {
+                every { eventTypes } returns
+                    listOf(
+                        SecurityEventType.FILE_DOWNLOAD,
+                        SecurityEventType.DATA_EXPORT,
+                    )
+            }
         return mockk {
             every { window } returns featureWindow
             every { baselineLookback } returns Duration.ofDays(30)
@@ -192,20 +227,30 @@ class FeatureComputationServiceTest {
         type: SecurityEventType = SecurityEventType.LOGIN_FAILED,
         ip: String? = null,
         deviceId: String? = null,
-        metadata: Map<String, String> = emptyMap()
-    ): EventHistoryDocument = EventHistoryDocument(
-        eventId = eventId,
-        receivedAt = occurredAt,
-        eventType = type,
-        subject = SecurityEventSubject(SubjectType.USER, SUBJECT),
-        occurredAt = occurredAt,
-        source = SecurityEventSource(application = "billing-api", ip = ip, deviceId = deviceId),
-        metadata = metadata,
-        storedAt = occurredAt
-    )
+        metadata: Map<String, String> = emptyMap(),
+    ): EventHistoryDocument =
+        EventHistoryDocument(
+            eventId = eventId,
+            receivedAt = occurredAt,
+            eventType = type,
+            subject = SecurityEventSubject(SubjectType.USER, SUBJECT),
+            occurredAt = occurredAt,
+            source = SecurityEventSource(application = "billing-api", ip = ip, deviceId = deviceId),
+            metadata = metadata,
+            storedAt = occurredAt,
+        )
 
-    private fun utc(hour: Int, minute: Int, dayOffset: Long = 0): Instant =
-        now.atZone(ZoneOffset.UTC).minusDays(dayOffset).withHour(hour).withMinute(minute).toInstant()
+    private fun utc(
+        hour: Int,
+        minute: Int,
+        dayOffset: Long = 0,
+    ): Instant =
+        now
+            .atZone(ZoneOffset.UTC)
+            .minusDays(dayOffset)
+            .withHour(hour)
+            .withMinute(minute)
+            .toInstant()
 
     companion object {
         private const val SUBJECT = "user-123"

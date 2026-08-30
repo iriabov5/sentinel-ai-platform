@@ -4,6 +4,8 @@ plugins {
     id("com.google.devtools.ksp") version "2.3.7" apply false
     id("io.micronaut.application") version "4.6.2" apply false
     id("io.micronaut.aot") version "4.6.2" apply false
+    id("org.jlleitschuh.gradle.ktlint") version "14.2.0" apply false
+    id("io.gitlab.arturbosch.detekt") version "1.23.8" apply false
     id("org.sonarqube") version "7.3.1.8318"
     jacoco
 }

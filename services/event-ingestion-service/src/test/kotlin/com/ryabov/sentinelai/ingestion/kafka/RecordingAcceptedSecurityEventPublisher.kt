@@ -11,8 +11,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
  */
 @Singleton
 @Requires(property = "kafka.enabled", value = "false")
-open class RecordingAcceptedSecurityEventPublisher : AcceptedSecurityEventPublisher {
-
+class RecordingAcceptedSecurityEventPublisher : AcceptedSecurityEventPublisher {
     val published: ConcurrentLinkedQueue<AcceptedSecurityEvent> = ConcurrentLinkedQueue()
 
     @Volatile
@@ -20,7 +19,7 @@ open class RecordingAcceptedSecurityEventPublisher : AcceptedSecurityEventPublis
 
     override suspend fun publish(event: AcceptedSecurityEvent) {
         if (shouldFail) {
-            throw IllegalStateException("Kafka unavailable")
+            error("Kafka unavailable")
         }
         published.add(event)
     }

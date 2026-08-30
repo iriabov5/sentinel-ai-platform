@@ -10,12 +10,14 @@ import java.util.concurrent.TimeUnit
 
 @Singleton
 @Requires(property = "kafka.enabled", value = "true", defaultValue = "true")
-open class KafkaDeadLetterPublisher(
+class KafkaDeadLetterPublisher(
     private val kafkaClient: DeadLetterKafkaClient,
-    @param:Named("io") private val ioDispatcher: CoroutineDispatcher
+    @param:Named("io") private val ioDispatcher: CoroutineDispatcher,
 ) : DeadLetterPublisher {
-
-    override suspend fun publish(key: String, payload: String) {
+    override suspend fun publish(
+        key: String,
+        payload: String,
+    ) {
         withContext(ioDispatcher) {
             kafkaClient.send(key, payload).get(2, TimeUnit.SECONDS)
         }

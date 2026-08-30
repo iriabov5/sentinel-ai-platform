@@ -10,7 +10,6 @@ import jakarta.validation.constraints.Positive
  */
 @ConfigurationProperties("sentinel.kafka")
 interface BehaviorKafkaProperties {
-
     val topics: Topics
 
     /**
@@ -22,7 +21,6 @@ interface BehaviorKafkaProperties {
 
     @ConfigurationProperties("topics")
     interface Topics {
-
         @get:Bindable(defaultValue = "security.events.raw")
         @get:NotBlank
         val raw: String

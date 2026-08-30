@@ -15,58 +15,58 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.bson.BsonDocument
 import org.bson.Document
 import org.bson.conversions.Bson
-import org.junit.jupiter.api.Assertions.assertDoesNotThrow
-import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.time.Instant
+import kotlin.test.assertIs
 
 @DisplayName("MongoDB event history repository")
 class MongoEventHistoryRepositoryTest {
-
     @Test
     @DisplayName("Вставляет history document")
-    fun `inserts history document`() = runBlocking {
-        val collection = mockCollection()
-        every { collection.insertOne(any()) } returns mockk()
-        val repository = MongoEventHistoryRepository(mongoClient(collection), testProperties(), Dispatchers.Unconfined)
+    fun `inserts history document`() =
+        runTest {
+            val collection = mockCollection()
+            every { collection.insertOne(any()) } returns mockk()
+            val repository =
+                MongoEventHistoryRepository(mongoClient(collection), testProperties(), Dispatchers.Unconfined)
 
-        repository.insertIgnoringDuplicateEventId(historyDocument())
+            repository.insertIgnoringDuplicateEventId(historyDocument())
 
-        verify { collection.insertOne(any<Document>()) }
-    }
+            verify { collection.insertOne(any<Document>()) }
+        }
 
     @Test
     @DisplayName("Игнорирует duplicate key по eventId")
-    fun `ignores duplicate event id`() {
-        val collection = mockCollection()
-        every { collection.insertOne(any()) } throws duplicateKeyException()
-        val repository = MongoEventHistoryRepository(mongoClient(collection), testProperties(), Dispatchers.Unconfined)
+    fun `ignores duplicate event id`() =
+        runTest {
+            val collection = mockCollection()
+            every { collection.insertOne(any()) } throws duplicateKeyException()
+            val repository =
+                MongoEventHistoryRepository(mongoClient(collection), testProperties(), Dispatchers.Unconfined)
 
-        assertDoesNotThrow {
-            runBlocking {
-                repository.insertIgnoringDuplicateEventId(historyDocument())
-            }
+            repository.insertIgnoringDuplicateEventId(historyDocument())
         }
-    }
 
     @Test
     @DisplayName("Пробрасывает unexpected Mongo write error")
-    fun `rethrows unexpected write error`() {
-        val collection = mockCollection()
-        every { collection.insertOne(any()) } throws otherWriteException()
-        val repository = MongoEventHistoryRepository(mongoClient(collection), testProperties(), Dispatchers.Unconfined)
+    fun `rethrows unexpected write error`() =
+        runTest {
+            val collection = mockCollection()
+            every { collection.insertOne(any()) } throws otherWriteException()
+            val repository =
+                MongoEventHistoryRepository(mongoClient(collection), testProperties(), Dispatchers.Unconfined)
 
-        assertThrows(MongoWriteException::class.java) {
-            runBlocking {
-                repository.insertIgnoringDuplicateEventId(historyDocument())
-            }
+            val exception =
+                runCatching {
+                    repository.insertIgnoringDuplicateEventId(historyDocument())
+                }.exceptionOrNull()
+            assertIs<MongoWriteException>(exception)
         }
-    }
 
     private fun mongoClient(collection: MongoCollection<Document>): MongoClient {
         val database = mockk<MongoDatabase>()
@@ -86,13 +86,13 @@ class MongoEventHistoryRepositoryTest {
     private fun duplicateKeyException(): MongoWriteException =
         MongoWriteException(
             WriteError(11000, "duplicate", BsonDocument()),
-            mockk(relaxed = true)
+            mockk(relaxed = true),
         )
 
     private fun otherWriteException(): MongoWriteException =
         MongoWriteException(
             WriteError(50, "timeout", BsonDocument()),
-            mockk(relaxed = true)
+            mockk(relaxed = true),
         )
 
     private fun historyDocument(): EventHistoryDocument =
@@ -104,7 +104,7 @@ class MongoEventHistoryRepositoryTest {
             occurredAt = Instant.parse("2026-08-20T10:14:00Z"),
             source = SecurityEventSource(application = "billing-api"),
             metadata = mapOf("reason" to "INVALID_PASSWORD"),
-            storedAt = Instant.parse("2026-08-20T10:16:00Z")
+            storedAt = Instant.parse("2026-08-20T10:16:00Z"),
         )
 
     private fun testProperties(): BehaviorMongoProperties =

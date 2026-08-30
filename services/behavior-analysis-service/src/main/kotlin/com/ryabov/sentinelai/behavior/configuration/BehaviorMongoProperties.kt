@@ -9,7 +9,6 @@ import jakarta.validation.constraints.NotBlank
  */
 @ConfigurationProperties("sentinel.mongodb")
 interface BehaviorMongoProperties {
-
     @get:Bindable(defaultValue = "behavior_analysis")
     @get:NotBlank
     val database: String

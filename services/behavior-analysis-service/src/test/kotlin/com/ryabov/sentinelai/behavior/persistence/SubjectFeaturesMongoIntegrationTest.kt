@@ -14,9 +14,7 @@ import io.micronaut.http.client.annotation.Client
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.micronaut.test.support.TestPropertyProvider
 import jakarta.inject.Inject
-import kotlinx.coroutines.runBlocking
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
+import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
@@ -26,13 +24,15 @@ import org.testcontainers.containers.MongoDBContainer
 import org.testcontainers.utility.DockerImageName
 import java.time.Duration
 import java.time.Instant
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 @MicronautTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @EnabledIf("dockerAvailable")
 @DisplayName("Subject features integration: MongoDB history")
 class SubjectFeaturesMongoIntegrationTest : TestPropertyProvider {
-
     @Inject
     @field:Client("/")
     lateinit var httpClient: HttpClient
@@ -48,7 +48,7 @@ class SubjectFeaturesMongoIntegrationTest : TestPropertyProvider {
             "mongodb.uri" to mongo.connectionString,
             "sentinel.persistence" to "mongo",
             "sentinel.mongodb.database" to "behavior_analysis",
-            "sentinel.mongodb.collection" to COLLECTION
+            "sentinel.mongodb.collection" to COLLECTION,
         )
     }
 
@@ -56,12 +56,12 @@ class SubjectFeaturesMongoIntegrationTest : TestPropertyProvider {
     @DisplayName("Считает фичи по сохранённой MongoDB history")
     fun `computes features from stored history`() {
         val now = Instant.now()
-        runBlocking {
+        runTest {
             repository.insertIgnoringDuplicateEventId(
-                event("b1", now.minus(Duration.ofDays(2)), ip = "10.0.0.1", deviceId = "dev-1")
+                event("b1", now.minus(Duration.ofDays(2)), ip = "10.0.0.1", deviceId = "dev-1"),
             )
             repository.insertIgnoringDuplicateEventId(
-                event("w1", now.minus(Duration.ofHours(1)), ip = "10.0.0.1", deviceId = "dev-1")
+                event("w1", now.minus(Duration.ofHours(1)), ip = "10.0.0.1", deviceId = "dev-1"),
             )
             repository.insertIgnoringDuplicateEventId(
                 event(
@@ -70,21 +70,22 @@ class SubjectFeaturesMongoIntegrationTest : TestPropertyProvider {
                     ip = "203.0.113.7",
                     deviceId = "dev-2",
                     type = SecurityEventType.FILE_DOWNLOAD,
-                    metadata = mapOf("bytes" to "100")
-                )
+                    metadata = mapOf("bytes" to "100"),
+                ),
             )
         }
 
-        val response = httpClient.toBlocking().exchange(
-            HttpRequest.GET<Any>("/api/v1/subjects/user-123/features"),
-            SubjectFeatures::class.java
-        )
+        val response =
+            httpClient.toBlocking().exchange(
+                HttpRequest.GET<Any>("/api/v1/subjects/user-123/features"),
+                SubjectFeatures::class.java,
+            )
 
         assertEquals(HttpStatus.OK, response.status)
-        val features = response.body()!!.features.associateBy { it.name }
-        assertEquals(2.0, features["new_ip_device"]!!.value)
-        assertEquals(100.0, features["download_volume"]!!.value)
-        assertTrue(features["request_rate"]!!.value > 0.0)
+        val features = assertNotNull(response.body()).features.associateBy { it.name }
+        assertEquals(2.0, requireNotNull(features["new_ip_device"]).value)
+        assertEquals(100.0, requireNotNull(features["download_volume"]).value)
+        assertTrue(requireNotNull(features["request_rate"]).value > 0.0)
     }
 
     private fun event(
@@ -93,17 +94,18 @@ class SubjectFeaturesMongoIntegrationTest : TestPropertyProvider {
         type: SecurityEventType = SecurityEventType.LOGIN_FAILED,
         ip: String? = null,
         deviceId: String? = null,
-        metadata: Map<String, String> = emptyMap()
-    ): EventHistoryDocument = EventHistoryDocument(
-        eventId = eventId,
-        receivedAt = occurredAt,
-        eventType = type,
-        subject = SecurityEventSubject(SubjectType.USER, "user-123"),
-        occurredAt = occurredAt,
-        source = SecurityEventSource(application = "billing-api", ip = ip, deviceId = deviceId),
-        metadata = metadata,
-        storedAt = occurredAt
-    )
+        metadata: Map<String, String> = emptyMap(),
+    ): EventHistoryDocument =
+        EventHistoryDocument(
+            eventId = eventId,
+            receivedAt = occurredAt,
+            eventType = type,
+            subject = SecurityEventSubject(SubjectType.USER, "user-123"),
+            occurredAt = occurredAt,
+            source = SecurityEventSource(application = "billing-api", ip = ip, deviceId = deviceId),
+            metadata = metadata,
+            storedAt = occurredAt,
+        )
 
     companion object {
         private const val COLLECTION = "event_history"

@@ -9,7 +9,6 @@ import org.junit.jupiter.api.Test
 
 @DisplayName("Kafka listener accepted security events")
 class AcceptedSecurityEventListenerTest {
-
     @Test
     @DisplayName("Делегирует raw record в history service")
     fun `delegates record to history service`() {

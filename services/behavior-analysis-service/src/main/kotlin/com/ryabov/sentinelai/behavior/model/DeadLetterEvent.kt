@@ -9,5 +9,5 @@ data class DeadLetterEvent(
     val originalKey: String?,
     val payload: String,
     val reason: String,
-    val failedAt: Instant
+    val failedAt: Instant,
 )

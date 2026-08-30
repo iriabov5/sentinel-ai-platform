@@ -10,18 +10,14 @@ import java.time.Instant
 data class SecurityEventRequest(
     @field:NotNull
     val eventType: SecurityEventType?,
-
     @field:Valid
     @field:NotNull
     val subject: SecurityEventSubject?,
-
     @field:NotNull
     val occurredAt: Instant?,
-
     @field:Valid
     @field:NotNull
     val source: SecurityEventSource?,
-
     @field:Size(max = 25)
-    val metadata: Map<String, String> = emptyMap()
+    val metadata: Map<String, String> = emptyMap(),
 )

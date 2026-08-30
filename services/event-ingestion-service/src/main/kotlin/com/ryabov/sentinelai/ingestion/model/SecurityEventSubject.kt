@@ -9,8 +9,7 @@ import jakarta.validation.constraints.Size
 data class SecurityEventSubject(
     @field:NotNull
     val type: SubjectType?,
-
     @field:NotBlank
     @field:Size(max = 128)
-    val id: String?
+    val id: String?,
 )

@@ -5,5 +5,5 @@ import io.micronaut.serde.annotation.Serdeable
 @Serdeable
 data class SecurityEventSubject(
     val type: SubjectType,
-    val id: String
+    val id: String,
 )

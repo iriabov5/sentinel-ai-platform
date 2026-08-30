@@ -13,18 +13,17 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 @Singleton
 @Requires(property = "sentinel.persistence", value = "memory")
-open class InMemoryEventHistoryQueryRepository : EventHistoryQueryRepository {
-
+class InMemoryEventHistoryQueryRepository : EventHistoryQueryRepository {
     val documents: MutableList<EventHistoryDocument> = mutableListOf()
     private val remainingFailures = AtomicInteger(0)
 
     override suspend fun findForSubject(
         subjectId: String,
         from: Instant,
-        to: Instant
+        to: Instant,
     ): List<EventHistoryDocument> {
         if (remainingFailures.getAndUpdate { current -> if (current > 0) current - 1 else 0 } > 0) {
-            throw IllegalStateException("MongoDB unavailable")
+            error("MongoDB unavailable")
         }
         return documents
             .filter { it.subject.id == subjectId && it.occurredAt >= from && it.occurredAt < to }

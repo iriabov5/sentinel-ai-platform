@@ -23,22 +23,22 @@ import org.bson.Document
  */
 @Singleton
 @Requires(property = "sentinel.persistence", value = "mongo", defaultValue = "mongo")
-open class MongoEventHistoryRepository(
+class MongoEventHistoryRepository(
     private val mongoClient: MongoClient,
     private val mongoProperties: BehaviorMongoProperties,
-    @param:Named("io") private val ioDispatcher: CoroutineDispatcher
+    @param:Named("io") private val ioDispatcher: CoroutineDispatcher,
 ) : EventHistoryRepository {
-
     private val collection by lazy {
-        val mongoCollection = mongoClient
-            .getDatabase(mongoProperties.database)
-            .getCollection(mongoProperties.collection)
+        val mongoCollection =
+            mongoClient
+                .getDatabase(mongoProperties.database)
+                .getCollection(mongoProperties.collection)
         mongoCollection.createIndex(Indexes.ascending("eventId"), IndexOptions().unique(true))
         mongoCollection.createIndex(
             Indexes.compoundIndex(
                 Indexes.ascending("subject.id"),
-                Indexes.ascending("occurredAt")
-            )
+                Indexes.ascending("occurredAt"),
+            ),
         )
         mongoCollection
     }
@@ -57,15 +57,17 @@ open class MongoEventHistoryRepository(
     }
 
     private fun EventHistoryDocument.toBson(): Document {
-        val subjectDocument = Document()
-            .append("type", subject.type.name)
-            .append("id", subject.id)
-        val sourceDocument = Document()
-            .append("application", source.application)
-            .append("ip", source.ip)
-            .append("deviceId", source.deviceId)
-            .append("endpoint", source.endpoint)
-            .append("region", source.region)
+        val subjectDocument =
+            Document()
+                .append("type", subject.type.name)
+                .append("id", subject.id)
+        val sourceDocument =
+            Document()
+                .append("application", source.application)
+                .append("ip", source.ip)
+                .append("deviceId", source.deviceId)
+                .append("endpoint", source.endpoint)
+                .append("region", source.region)
         return Document()
             .append("eventId", eventId)
             .append("receivedAt", receivedAt)

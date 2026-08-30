@@ -13,5 +13,5 @@ data class EventHistoryDocument(
     val occurredAt: Instant,
     val source: SecurityEventSource,
     val metadata: Map<String, String>,
-    val storedAt: Instant
+    val storedAt: Instant,
 )

@@ -14,10 +14,9 @@ import java.util.concurrent.CompletableFuture
 @Requires(property = "kafka.enabled", value = "true", defaultValue = "true")
 @KafkaClient(id = "accepted-security-events")
 fun interface AcceptedSecurityEventKafkaClient {
-
     @Topic("\${sentinel.kafka.topic}")
     fun send(
         @KafkaKey key: String,
-        event: AcceptedSecurityEvent
+        event: AcceptedSecurityEvent,
     ): CompletableFuture<RecordMetadata>
 }

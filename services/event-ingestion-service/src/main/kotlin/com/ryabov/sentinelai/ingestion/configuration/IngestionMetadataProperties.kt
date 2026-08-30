@@ -13,7 +13,6 @@ import jakarta.validation.constraints.Positive
  */
 @ConfigurationProperties("sentinel.ingestion.metadata")
 interface IngestionMetadataProperties {
-
     /**
      * Максимальное количество key/value entries в `metadata` одного event.
      */

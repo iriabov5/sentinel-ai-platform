@@ -10,10 +10,9 @@ import java.util.concurrent.CompletableFuture
 @Requires(property = "kafka.enabled", value = "true", defaultValue = "true")
 @KafkaClient(id = "security-events-dlq")
 fun interface DeadLetterKafkaClient {
-
     @Topic("\${sentinel.kafka.topics.dlq}")
     fun send(
         @KafkaKey key: String,
-        payload: String
+        payload: String,
     ): CompletableFuture<RecordMetadata>
 }

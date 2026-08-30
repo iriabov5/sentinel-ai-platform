@@ -1,0 +1,52 @@
+build:
+  maxIssues: 0
+
+performance:
+  SpreadOperator:
+    active: false
+
+complexity:
+  LongMethod:
+    threshold: 80
+  LongParameterList:
+    constructorThreshold: 10
+    functionThreshold: 8
+  TooManyFunctions:
+    thresholdInClasses: 20
+    thresholdInFiles: 20
+  CyclomaticComplexMethod:
+    threshold: 20
+  NestedBlockDepth:
+    threshold: 5
+
+exceptions:
+  TooGenericExceptionCaught:
+    active: false
+  SwallowedException:
+    active: true
+    ignoredExceptionTypes:
+      - InterruptedException
+      - NumberFormatException
+      - ParseException
+      - MalformedURLException
+
+style:
+  MagicNumber:
+    ignoreNumbers: ['-1', '0', '1', '2', '3', '10']
+    ignorePropertyDeclaration: true
+    ignoreAnnotation: true
+    ignoreEnums: true
+    ignoreNamedArgument: true
+    ignoreLocalVariableDeclaration: true
+  MaxLineLength:
+    active: false
+  ReturnCount:
+    max: 4
+  ThrowsCount:
+    max: 5
+  WildcardImport:
+    active: true
+  UnusedPrivateMember:
+    active: true
+  ForbiddenComment:
+    active: false

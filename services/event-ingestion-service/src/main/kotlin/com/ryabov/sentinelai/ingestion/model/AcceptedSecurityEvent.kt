@@ -14,5 +14,5 @@ data class AcceptedSecurityEvent(
     val subject: SecurityEventSubject,
     val occurredAt: Instant,
     val source: SecurityEventSource,
-    val metadata: Map<String, String> = emptyMap()
+    val metadata: Map<String, String> = emptyMap(),
 )

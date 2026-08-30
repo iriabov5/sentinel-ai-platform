@@ -10,15 +10,20 @@ import kotlinx.coroutines.runBlocking
 /**
  * Kafka consumer adapter. Метод listener дожидается persist/DLQ, чтобы offset
  * коммитился только после обработки record.
+ *
+ * Micronaut Kafka callback не `suspend`, поэтому здесь остаётся тонкий
+ * `runBlocking` только на границе listener → coroutine service.
  */
 @Requires(property = "kafka.enabled", value = "true", defaultValue = "true")
 @KafkaListener(groupId = "behavior-analysis-service")
-open class AcceptedSecurityEventListener(
-    private val historyService: SecurityEventHistoryService
+class AcceptedSecurityEventListener(
+    private val historyService: SecurityEventHistoryService,
 ) {
-
     @Topic("\${sentinel.kafka.topics.raw}")
-    open fun receive(@KafkaKey key: String?, value: String) {
+    fun receive(
+        @KafkaKey key: String?,
+        value: String,
+    ) {
         runBlocking {
             historyService.handleRaw(key, value)
         }

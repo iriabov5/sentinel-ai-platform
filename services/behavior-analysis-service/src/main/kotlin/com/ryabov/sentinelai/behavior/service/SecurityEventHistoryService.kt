@@ -13,14 +13,16 @@ import java.time.Instant
  * устойчивом сбое. Feature extraction в этот service не входит.
  */
 @Singleton
-open class SecurityEventHistoryService(
+class SecurityEventHistoryService(
     private val repository: EventHistoryRepository,
     private val deadLetterPublisher: DeadLetterPublisher,
     private val kafkaProperties: BehaviorKafkaProperties,
-    private val jsonMapper: JsonMapper
+    private val jsonMapper: JsonMapper,
 ) {
-
-    suspend fun handleRaw(key: String?, payload: String) {
+    suspend fun handleRaw(
+        key: String?,
+        payload: String,
+    ) {
         var lastError: Exception? = null
         repeat(kafkaProperties.processingRetries) {
             try {
@@ -35,27 +37,34 @@ open class SecurityEventHistoryService(
     }
 
     private fun parseEvent(payload: String): AcceptedSecurityEvent {
-        val event = jsonMapper.readValue(
-            payload.toByteArray(Charsets.UTF_8),
-            AcceptedSecurityEvent::class.java
-        )
+        val event =
+            jsonMapper.readValue(
+                payload.toByteArray(Charsets.UTF_8),
+                AcceptedSecurityEvent::class.java,
+            )
         require(event.eventId.isNotBlank()) { "eventId must not be blank" }
         require(event.subject.id.isNotBlank()) { "subject.id must not be blank" }
         require(event.source.application.isNotBlank()) { "source.application must not be blank" }
         return event
     }
 
-    private suspend fun publishDeadLetter(key: String?, payload: String, error: Exception?) {
+    private suspend fun publishDeadLetter(
+        key: String?,
+        payload: String,
+        error: Exception?,
+    ) {
         val dlqKey = key?.takeIf { it.isNotBlank() } ?: "unknown"
-        val dlqPayload = jsonMapper.writeValueAsBytes(
-            DeadLetterEvent(
-                originalTopic = kafkaProperties.topics.raw,
-                originalKey = key,
-                payload = payload,
-                reason = error?.message ?: "unknown processing error",
-                failedAt = Instant.now()
-            )
-        ).toString(Charsets.UTF_8)
+        val dlqPayload =
+            jsonMapper
+                .writeValueAsBytes(
+                    DeadLetterEvent(
+                        originalTopic = kafkaProperties.topics.raw,
+                        originalKey = key,
+                        payload = payload,
+                        reason = error?.message ?: "unknown processing error",
+                        failedAt = Instant.now(),
+                    ),
+                ).toString(Charsets.UTF_8)
         try {
             deadLetterPublisher.publish(dlqKey, dlqPayload)
         } catch (dlqError: Exception) {
@@ -72,6 +81,6 @@ open class SecurityEventHistoryService(
             occurredAt = occurredAt,
             source = source,
             metadata = metadata,
-            storedAt = Instant.now()
+            storedAt = Instant.now(),
         )
 }

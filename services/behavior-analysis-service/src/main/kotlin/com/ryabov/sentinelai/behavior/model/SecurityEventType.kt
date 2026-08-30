@@ -10,5 +10,5 @@ enum class SecurityEventType {
     TOKEN_CREATED,
     PRIVILEGE_ESCALATION,
     DATA_EXPORT,
-    ADMIN_ACTION
+    ADMIN_ACTION,
 }

@@ -16,16 +16,16 @@ import java.util.concurrent.TimeUnit
  */
 @Singleton
 @Requires(property = "kafka.enabled", value = "true", defaultValue = "true")
-open class KafkaAcceptedSecurityEventPublisher(
+class KafkaAcceptedSecurityEventPublisher(
     private val kafkaClient: AcceptedSecurityEventKafkaClient,
     private val kafkaProperties: IngestionKafkaProperties,
-    @param:Named("io") private val ioDispatcher: CoroutineDispatcher
+    @param:Named("io") private val ioDispatcher: CoroutineDispatcher,
 ) : AcceptedSecurityEventPublisher {
-
     override suspend fun publish(event: AcceptedSecurityEvent) {
         val key = requireNotNull(event.subject.id) { "subject.id is required for Kafka partition key" }
         withContext(ioDispatcher) {
-            kafkaClient.send(key, event)
+            kafkaClient
+                .send(key, event)
                 .get(kafkaProperties.publishTimeout.toMillis(), TimeUnit.MILLISECONDS)
         }
     }

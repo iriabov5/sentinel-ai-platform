@@ -27,12 +27,11 @@ import java.time.Instant
  */
 @Singleton
 @Requires(property = "sentinel.persistence", value = "mongo", defaultValue = "mongo")
-open class MongoEventHistoryQueryRepository(
+class MongoEventHistoryQueryRepository(
     private val mongoClient: MongoClient,
     private val mongoProperties: BehaviorMongoProperties,
-    @param:Named("io") private val ioDispatcher: CoroutineDispatcher
+    @param:Named("io") private val ioDispatcher: CoroutineDispatcher,
 ) : EventHistoryQueryRepository {
-
     private val collection by lazy {
         mongoClient
             .getDatabase(mongoProperties.database)
@@ -42,19 +41,20 @@ open class MongoEventHistoryQueryRepository(
     override suspend fun findForSubject(
         subjectId: String,
         from: Instant,
-        to: Instant
-    ): List<EventHistoryDocument> = withContext(ioDispatcher) {
-        collection.find(
-            Filters.and(
-                Filters.eq("subject.id", subjectId),
-                Filters.gte("occurredAt", from),
-                Filters.lt("occurredAt", to)
-            )
-        )
-            .sort(Sorts.ascending("occurredAt"))
-            .into(mutableListOf())
-            .map { it.toEventHistoryDocument() }
-    }
+        to: Instant,
+    ): List<EventHistoryDocument> =
+        withContext(ioDispatcher) {
+            collection
+                .find(
+                    Filters.and(
+                        Filters.eq("subject.id", subjectId),
+                        Filters.gte("occurredAt", from),
+                        Filters.lt("occurredAt", to),
+                    ),
+                ).sort(Sorts.ascending("occurredAt"))
+                .into(mutableListOf())
+                .map { it.toEventHistoryDocument() }
+        }
 
     private fun Document.toEventHistoryDocument(): EventHistoryDocument {
         val subjectDocument = get("subject", Document::class.java)
@@ -64,23 +64,26 @@ open class MongoEventHistoryQueryRepository(
             eventId = getString("eventId"),
             receivedAt = getDate("receivedAt").toInstant(),
             eventType = SecurityEventType.valueOf(getString("eventType")),
-            subject = SecurityEventSubject(
-                type = SubjectType.valueOf(subjectDocument.getString("type")),
-                id = subjectDocument.getString("id")
-            ),
+            subject =
+                SecurityEventSubject(
+                    type = SubjectType.valueOf(subjectDocument.getString("type")),
+                    id = subjectDocument.getString("id"),
+                ),
             occurredAt = getDate("occurredAt").toInstant(),
-            source = SecurityEventSource(
-                application = sourceDocument.getString("application"),
-                ip = sourceDocument.getString("ip"),
-                deviceId = sourceDocument.getString("deviceId"),
-                endpoint = sourceDocument.getString("endpoint"),
-                region = sourceDocument.getString("region")
-            ),
-            metadata = metadataDocument
-                ?.entries
-                ?.associate { it.key to it.value.toString() }
-                ?: emptyMap(),
-            storedAt = getDate("storedAt").toInstant()
+            source =
+                SecurityEventSource(
+                    application = sourceDocument.getString("application"),
+                    ip = sourceDocument.getString("ip"),
+                    deviceId = sourceDocument.getString("deviceId"),
+                    endpoint = sourceDocument.getString("endpoint"),
+                    region = sourceDocument.getString("region"),
+                ),
+            metadata =
+                metadataDocument
+                    ?.entries
+                    ?.associate { it.key to it.value.toString() }
+                    ?: emptyMap(),
+            storedAt = getDate("storedAt").toInstant(),
         )
     }
 }

@@ -8,5 +8,5 @@ data class SecurityEventSource(
     val ip: String? = null,
     val deviceId: String? = null,
     val endpoint: String? = null,
-    val region: String? = null
+    val region: String? = null,
 )
